@@ -8,7 +8,7 @@ from transformers import AutoModelWithLMHead, AutoTokenizer
 import nltk
 
 
-#TODO: Запихнуть это всё в Github и проверить
+
 #TODO: переделать на классы, в которых и модели, и параметры, здесь просто создавать экземпляры
 
 sw_logger.info('Загружаем пакет «stopwords» для nltk')
