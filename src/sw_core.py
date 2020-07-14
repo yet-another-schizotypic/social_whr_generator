@@ -32,8 +32,8 @@ from nltk.corpus import stopwords
 from pymystem3 import Mystem
 from string import punctuation
 from itertools import chain
-from modelswrapper import (word2vec_wrapper, transformers_tokenizer_RU_BERT_CONV,
-                           transformers_from_RU_BERT_CONV_model)
+from modelswrapper import (word2vec_wrapper, conversational_ru_bert_tokenizer,
+                           conversational_ru_bert_model)
 
 from transformers import top_k_top_p_filtering
 from collections import UserDict
@@ -115,8 +115,8 @@ class NLWrapper:
 
     @staticmethod
     def get_BERT_transformer_embeddings(word):
-        input_ids = transformers_tokenizer_RU_BERT_CONV.encode(word.title, return_tensors="pt")
-        out = transformers_from_RU_BERT_CONV_model(input_ids)
+        input_ids = conversational_ru_bert_tokenizer.encode(word.title, return_tensors="pt")
+        out = conversational_ru_bert_model(input_ids)
         embeddings = out[1][1][:, -1, :].detach().numpy().tolist()
         return embeddings
 
@@ -141,8 +141,8 @@ class NLWrapper:
     @staticmethod
     def generate_sequel_for_list_BERT(given_list: list):
         sequence = NLWrapper.__creat_clear_sequence_from_list(given_list)
-        input_ids = transformers_tokenizer_RU_BERT_CONV.encode(sequence, return_tensors="pt")
-        next_token_logits = transformers_from_RU_BERT_CONV_model(input_ids)[0][:, -1, :]
+        input_ids = conversational_ru_bert_tokenizer.encode(sequence, return_tensors="pt")
+        next_token_logits = conversational_ru_bert_model(input_ids)[0][:, -1, :]
         # filter
         filtered_next_token_logits = top_k_top_p_filtering(next_token_logits, top_k=50, top_p=1.0)
 
@@ -152,7 +152,7 @@ class NLWrapper:
             try:
                 probs = F.softmax(filtered_next_token_logits, dim=dim)
                 next_token = torch.multinomial(probs, num_samples=50)
-                sequel = sequel + ' ' + (transformers_tokenizer_RU_BERT_CONV.decode(next_token[0]))
+                sequel = sequel + ' ' + (conversational_ru_bert_tokenizer.decode(next_token[0]))
             except BaseException:
                 pass
 
@@ -175,10 +175,10 @@ class NLWrapper:
         for term in explanation:
             exp_sequence = exp_sequence + ' ' + term.title
 
-        tokenize_input = transformers_tokenizer_RU_BERT_CONV.tokenize(exp_sequence)
-        transformers_from_RU_BERT_CONV_model.eval()
-        tensor_input = torch.tensor([transformers_tokenizer_RU_BERT_CONV.convert_tokens_to_ids(tokenize_input)])
-        predictions = transformers_from_RU_BERT_CONV_model(tensor_input)
+        tokenize_input = conversational_ru_bert_tokenizer.tokenize(exp_sequence)
+        conversational_ru_bert_model.eval()
+        tensor_input = torch.tensor([conversational_ru_bert_tokenizer.convert_tokens_to_ids(tokenize_input)])
+        predictions = conversational_ru_bert_model(tensor_input)
         loss_fct = torch.nn.CrossEntropyLoss()
         loss = loss_fct(predictions[0].squeeze(), tensor_input.squeeze()).data
         return math.exp(loss)

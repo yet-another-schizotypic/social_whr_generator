@@ -3,7 +3,7 @@ import os
 import pathlib
 LOGLEVEL = logging.INFO
 
-__project_path__ = pathlib.Path(__file__).parent.absolute()
+__project_path__ = pathlib.Path(__file__).parent.parent.absolute()
 # ===Основные константы===
 
 #==Пути до файлов модели Word2vec fasttext B-o-W==
@@ -15,20 +15,20 @@ WORD2VEC_MODEL_FILE = 'model.model'
 #==Модели на основе архитектуры BERT==
 # В конфигурационный файл этоих модели нужно добавить строчку "output_hidden_states": "True", если её там нет
 #Conversational RuBERT, http://docs.deeppavlov.ai/en/master/features/models/bert.html
-__conversational_ru_bert_model_relative_path__ = '/models/BERT/Conversational_RuBERT/ru_conversational_cased_L-12_H-768_A-12_pt/'
+__conversational_ru_bert_model_relative_path__ = 'models/BERT/conversational_ru_bert/ru_conversational_cased_L-12_H-768_A-12_pt'
 CONVERSATIONAL_RU_BERT_MODEL_PATH = os.path.join(__project_path__, __conversational_ru_bert_model_relative_path__)
 
 
 #RuBERT, Russian, cased, 12-layer, 768-hidden, 12-heads, 180M parameters, http://docs.deeppavlov.ai/en/master/features/models/bert.html
-__ru_bert_cased_model_relative_path__ = '/models/BERT/RuBERT_cased/rubert_cased_L-12_H-768_A-12_pt/'
+__ru_bert_cased_model_relative_path__ = 'models/BERT/ru_bert_cased/ru_bert_cased_l-12_H-768_A-12_pt/'
 RU_BERT_CASED_MODEL_PATH = os.path.join(__project_path__, __ru_bert_cased_model_relative_path__)
 
 #Sentence RuBERT, Russian, cased, 12-layer, 768-hidden, 12-heads, 180M, http://docs.deeppavlov.ai/en/master/features/models/bert.html
-__sentence_ru_bert_model_relative_path__ = '/models/BERT/Sentence_RuBERT/sentence_ru_cased_L-12_H-768_A-12_pt/'
+__sentence_ru_bert_model_relative_path__ = 'models/BERT/sentence_ru_bert/sentence_ru_cased_L-12_H-768_A-12_pt/'
 SENTENCE_RU_BERT_MODEL_PATH = os.path.join(__project_path__, __sentence_ru_bert_model_relative_path__)
 
-__slavic_bert_model_relative_path__ = '/models/BERT/SlavicBERT/bg_cs_pl_ru_cased_L-12_H-768_A-12_pt/'
-SLAVIC_BERT_MODEL_MODEL_PATH = os.path.join(__project_path__, __slavic_bert_model_relative_path__)
+__slavic_bert_model_relative_path__ = 'models/BERT/slavic_bert/bg_cs_pl_ru_cased_L-12_H-768_A-12_pt/'
+SLAVIC_BERT_MODEL_PATH = os.path.join(__project_path__, __slavic_bert_model_relative_path__)
 
 # bert-base-multilingual-uncased из Transformers, https://huggingface.co/transformers/pretrained_models.html
 BERT_BASE_MULTILINGUAL_UNCASED_PACKAGE_NAME = 'bert-base-multilingual-uncased'
