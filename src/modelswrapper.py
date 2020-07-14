@@ -1,4 +1,3 @@
-print()
 from sw_core import sw_logger
 import sw_constants
 import gensim
