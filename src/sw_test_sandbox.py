@@ -99,20 +99,20 @@ dirname = '/Users/yet-another-schizotypic/Documents/__Develop/Социобляд
 
 
 i = 0
-# for chain in right_chains_by_humans:
-#     test_chain = ExplanationChain()
-#     test_chain.load_from_string_list(chain)
+for chain in right_chains_by_humans:
+     test_chain = ExplanationChain()
+     test_chain.load_from_string_list(chain)
 #     out_file = open(os.path.join(dirname, (fname + str(i) + extension)), 'wb')
 #     pickle.dump(test_chain, out_file)
 #     out_file.close()
 # #    test_chain.debug_print()
-#     t = test_chain.test_quorum_decision(True)
-#     i = i + 1
+     t = test_chain.test_quorum_decision(True)
+     i = i + 1
 
-for i in range(1, 41):
-    in_file = open(os.path.join(dirname, (fname + str(i) + extension)), 'rb')
-    loaded_test_chain = pickle.load(in_file)
-    t = loaded_test_chain.test_quorum_decision(True)
+# for i in range(1, 41):
+#     in_file = open(os.path.join(dirname, (fname + str(i) + extension)), 'rb')
+#     loaded_test_chain = pickle.load(in_file)
+#     t = loaded_test_chain.test_quorum_decision(True)
 
 #TODO: нарисовать граф с выразимостью, посмотреть визуально, попробовать определить свойства.
 #TODO: посмотреть, обо что и как можно нормализовать вероятность проверки БЕРТа (lognorm,например)

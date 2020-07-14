@@ -8,6 +8,14 @@
       <excludeFolder url="file://$MODULE_DIR$/elmo" />
       <excludeFolder url="file://$MODULE_DIR$/gpt2" />
       <excludeFolder url="file://$MODULE_DIR$/graphs" />
+      <excludeFolder url="file://$MODULE_DIR$/models/BERT/Conversational_RuBERT" />
+      <excludeFolder url="file://$MODULE_DIR$/models/BERT/RuBERT_cased" />
+      <excludeFolder url="file://$MODULE_DIR$/models/BERT/Sentence RuBERT" />
+      <excludeFolder url="file://$MODULE_DIR$/models/BERT/Sentence_RuBERT" />
+      <excludeFolder url="file://$MODULE_DIR$/models/BERT/SlavicBERT" />
+      <excludeFolder url="file://$MODULE_DIR$/models/ELMo/tayga_lemmas_elmo_2048_2019" />
+      <excludeFolder url="file://$MODULE_DIR$/models/GPT2/Russian-gpt-2-finetuning" />
+      <excludeFolder url="file://$MODULE_DIR$/models/word2vec/tayga_none_fasttextcbow_300_10_2019" />
       <excludeFolder url="file://$MODULE_DIR$/test" />
       <excludeFolder url="file://$MODULE_DIR$/venv" />
     </content>

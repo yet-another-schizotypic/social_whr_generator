@@ -21,9 +21,11 @@ word2vec_model_file = os.path.join(sw_constants.WORD2VEC_MODEL_PATH, sw_constant
 word2vec_wrapper = gensim.models.KeyedVectors.load(word2vec_model_file)
 
 sw_logger.info('Загружаем модель RU_BERT_CONV')
-transformers_tokenizer_RU_BERT_CONV = AutoTokenizer.from_pretrained(sw_constants.BERT_MODEL_PATH)
-transformers_from_RU_BERT_CONV_model = AutoModelWithLMHead.from_pretrained(sw_constants.BERT_MODEL_PATH)
+transformers_tokenizer_RU_BERT_CONV = AutoTokenizer.from_pretrained(sw_constants.RU_BERT_CONV_MODEL_PATH)
+transformers_from_RU_BERT_CONV_model = AutoModelWithLMHead.from_pretrained(sw_constants.RU_BERT_CONV_MODEL_PATH)
 
 sw_logger.info('Все модели загружены успешно!')
 
 # TODO: Предсказатель и эмбеддинги на GPT-2
+# TODO: Эмбеддинги на ELMO без Deeppavlov скрипт конвертации: https://github.com/vlarine/transformers-ru
+# TODO: самоскачивающиеся BERT'ы из Huggingface

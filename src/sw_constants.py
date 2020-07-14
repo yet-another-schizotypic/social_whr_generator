@@ -1,12 +1,75 @@
 import logging
-
+import os
+import pathlib
 LOGLEVEL = logging.INFO
 
-# Основные константы
-WORD2VEC_MODEL_PATH = '//Word2vec/models/tayga_none_fasttextcbow_300_10_2019'
+__project_path__ = pathlib.Path(__file__).parent.absolute()
+# ===Основные константы===
+
+#==Пути до файлов модели Word2vec fasttext B-o-W==
+#Файл можно взять тут: https://rusvectores.org/ru/models/
+__word2vec_model_relative_path__ = 'models/word2vec/tayga_none_fasttextcbow_300_10_2019'
+WORD2VEC_MODEL_PATH = os.path.join(__project_path__, __word2vec_model_relative_path__)
 WORD2VEC_MODEL_FILE = 'model.model'
-# В конфиг модели BERT добавить строчку "output_hidden_states": "True", если её там нет
-BERT_MODEL_PATH = '//bert/models/deeppavlov/conversational_RuBERT_tf/ru_conversational_cased_L-12_H-768_A-12'
+
+#==Модели на основе архитектуры BERT==
+# В конфигурационный файл этоих модели нужно добавить строчку "output_hidden_states": "True", если её там нет
+#Conversational RuBERT, http://docs.deeppavlov.ai/en/master/features/models/bert.html
+__conversational_ru_bert_model_relative_path__ = '/models/BERT/Conversational_RuBERT/ru_conversational_cased_L-12_H-768_A-12_pt/'
+CONVERSATIONAL_RU_BERT_MODEL_PATH = os.path.join(__project_path__, __conversational_ru_bert_model_relative_path__)
+
+
+#RuBERT, Russian, cased, 12-layer, 768-hidden, 12-heads, 180M parameters, http://docs.deeppavlov.ai/en/master/features/models/bert.html
+__ru_bert_cased_model_relative_path__ = '/models/BERT/RuBERT_cased/rubert_cased_L-12_H-768_A-12_pt/'
+RU_BERT_CASED_MODEL_PATH = os.path.join(__project_path__, __ru_bert_cased_model_relative_path__)
+
+#Sentence RuBERT, Russian, cased, 12-layer, 768-hidden, 12-heads, 180M, http://docs.deeppavlov.ai/en/master/features/models/bert.html
+__sentence_ru_bert_model_relative_path__ = '/models/BERT/Sentence_RuBERT/sentence_ru_cased_L-12_H-768_A-12_pt/'
+SENTENCE_RU_BERT_MODEL_PATH = os.path.join(__project_path__, __sentence_ru_bert_model_relative_path__)
+
+__slavic_bert_model_relative_path__ = '/models/BERT/SlavicBERT/bg_cs_pl_ru_cased_L-12_H-768_A-12_pt/'
+SLAVIC_BERT_MODEL_MODEL_PATH = os.path.join(__project_path__, __slavic_bert_model_relative_path__)
+
+# bert-base-multilingual-uncased из Transformers, https://huggingface.co/transformers/pretrained_models.html
+BERT_BASE_MULTILINGUAL_UNCASED_PACKAGE_NAME = 'bert-base-multilingual-uncased'
+
+# bert-base-multilingual-cased из Transformers, https://huggingface.co/transformers/pretrained_models.html
+BERT_BASE_MULTILINGUAL_CASED_PACKAGE_NAME = 'bert-base-multilingual-cased'
+
+#==Модель на основе архитектуры GPT, https://github.com/vlomme/Russian-gpt-2
+# Как получить:
+# Скачиваем с гитхаба файл download_model.py, c он качает модель. Но она — в Tensoflow, а у наст
+# всё на pytorch. Поэтому нужно сконвертировать. Для этого:
+# 1. Устанавливаем пакет transformers;
+# 2. Делаем грязный хак: в файле convert_gpt2_checkpoint_to_pytorch.py — меняем конструкцию:
+#
+# Construct model
+# if gpt2_config_file == "":
+#     config = GPT2Config()
+# else:
+#     config = GPT2Config.from_json_file(gpt2_config_file)
+# model = GPT2Model(config)
+#
+#на:
+#config = GPT2Config.from_pretrained('gpt2-medium')  # Replace 'gpt2-medium' with whichever model spec you're converting
+#model = GPT2Model(config)
+#
+#Далее — с помощью утилиты transformers-cli convert производим конвертацию.
+#Документация — тут: https://huggingface.co/transformers/converting_tensorflow_models.html
+#Далее переименовываем файлы:
+# mv encoder.json2 vocab.json
+# mv vocab2.bpe merges.txt
+__gpt2_model_relative_path__ = '/models/GPT2/Russian-gpt-2-finetuning/'
+GPT2_MODEL_PATH = os.path.join(__project_path__, __gpt2_model_relative_path__)
+GPT2_VOCAB_FILE = os.path.join(GPT2_MODEL_PATH, 'vocab.json')
+GPT2_MEETS_FILE = os.path.join(GPT2_MODEL_PATH, 'meets.txt')
+
+#ELMo, tayga_lemmas_elmo_2048_2019, https://rusvectores.org/ru/models/
+__elmo_model_relative_path__ = '/models/ELMo/tayga_lemmas_elmo_2048_2019/'
+__elmo_model_path___ = os.path.join(__project_path__, __elmo_model_relative_path__)
+ELMO_MODEL_OPTIONS_FILE = os.path.join(__elmo_model_path___, 'options.json')
+ELMO_MODEL_WEIGHTS_FILE = os.path.join(__elmo_model_path___, 'model.hdf5')
+
 
 WORD2VEC = 'word2vec'
 BERT = 'bert'
