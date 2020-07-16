@@ -3,13 +3,13 @@ import scipy
 # import deeppavlov
 # import gensim
 
-from modelswrapper import word2vec_wrapper, math
+from sw_modelswrapper import word2vec_wrapper, math
 import sw_constants
 import networkx as nx
 import matplotlib.pyplot as plt
 import itertools
 
-from modelswrapper import NLWrapper
+from sw_modelswrapper import NLWrapper
 import collections
 
 

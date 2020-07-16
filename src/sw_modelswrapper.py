@@ -1,18 +1,13 @@
-
-
 from sw_core import sw_logger
 import sw_constants
 import gensim
 import os
 import torch
-from transformers import AutoModelWithLMHead, AutoTokenizer
+from transformers import AutoModelWithLMHead, AutoTokenizer, BertModel
 import nltk
 from allennlp.modules.elmo import Elmo, batch_to_ids
 
 # TODO: переделать на классы, в которых и модели, и параметры, здесь просто создавать экземпляры
-
-from abc import ABCMeta, abstractmethod
-
 
 # Чтобы ко всем моделям можно было обращаться одним образом, опишем интерфейс модели
 def abstractfunc(func):
@@ -20,6 +15,7 @@ def abstractfunc(func):
     return func
 
 
+# TODO разрешить далёким потомкам не иметь метода check_init_model_state
 class IAbstractModelWrapper(type):
 
     def __init__(self, name, bases, namespace):
@@ -54,9 +50,7 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
         self.model = None
         self.tokenizer = None
         if model_name in sw_constants.SW_SUPPORTED_MODELS:
-            if (model_name in sw_constants.SW_BERT_MODELS) or (model_name in sw_constants.SW_WORD2VEC_MODELS):
-                self.model_name = model_name
-                self.__model_name_or_path__ = sw_constants.SW_SUPPORTED_MODELS[model_name]
+            self.model_name = model_name
         else:
             raise Exception('Unsupported model type!')
 
@@ -67,22 +61,37 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
     @abstractfunc
     def check_init_model_state(self):
         if self.model is None:
+            sw_logger.info(
+                'Нам потребовалась модель, которая не была загружена:' +
+                ' {model_name}, загружаем её...'.format(model_name=self.model_name))
             if self.model_name in sw_constants.SW_WORD2VEC_MODELS:
-               # sw_logger.info(
-               #     'Нам потребовалась модель, которая не была загружена:' + self.model_name + 'Загружаем...')
                 self.model = gensim.models.KeyedVectors.load(sw_constants.SW_WORD2VEC_MODELS[self.model_name])
-               # sw_logger.info('Загрузка завершена.')
 
-            if self.model_name in sw_constants.SW_BERT_MODELS:
+            if (self.model_name in sw_constants.SW_BERT_MODELS) or (self.model_name in sw_constants.SW_GPT2_MODELS):
                 self.tokenizer = AutoTokenizer.from_pretrained(
                     sw_constants.SW_SUPPORTED_MODELS[self.model_name])
                 self.model = \
                     AutoModelWithLMHead.from_pretrained(sw_constants.SW_SUPPORTED_MODELS[self.model_name])
 
+            if self.model_name in sw_constants.SW_ELMO_MODELS:
+                self.model = Elmo(sw_constants.SW_SUPPORTED_MODELS[self.model_name][0],
+                                  sw_constants.SW_SUPPORTED_MODELS[self.model_name][1], 2,
+                                  dropout=0)
+
+            if self.model_name in sw_constants.SW_GPT2_MODELS:
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    sw_constants.SW_SUPPORTED_MODELS[self.model_name])
+                self.model = \
+                    AutoModelWithLMHead.from_pretrained(sw_constants.SW_SUPPORTED_MODELS[self.model_name])
+
+
+            sw_logger.info('Загрузка модели {model_name} завершена.'.format(model_name=self.model_name))
+
+
 class BertModelWrapper(BaseModelWrapper):
 
     def __init__(self, model):
-        super(BertModelWrapper, self).__init__(model)
+        super(self.__class__, self).__init__(model)
 
     def get_embeddings(self, word):
         super(self.__class__, self).check_init_model_state()
@@ -95,53 +104,59 @@ class BertModelWrapper(BaseModelWrapper):
         pass
 
 
+class Word2VecModelWrapper(BaseModelWrapper):
+    def __init__(self, model):
+        super(self.__class__, self).__init__(model)
+
+    def get_embeddings(self, word):
+        super(self.__class__, self).check_init_model_state()
+        return self.model.get_vector(word)
+        pass
+
+    def check_init_model_state(self):
+        pass
 
 
-sw_logger.info('Начинаем загрузку моделей...')
+class GPT2ModelWrapper(BaseModelWrapper):
+    def __init__(self, model):
+        super(self.__class__, self).__init__(model)
 
-sw_logger.info('Загружаем модель CONVERSATIONAL_RU_BERT')
-conversational_ru_bert_tokenizer = AutoTokenizer.from_pretrained(sw_constants.CONVERSATIONAL_RU_BERT_MODEL_PATH)
-conversational_ru_bert_model = \
-    AutoModelWithLMHead.from_pretrained(sw_constants.CONVERSATIONAL_RU_BERT_MODEL_PATH)
+    def get_embeddings(self, word):
+        super(self.__class__, self).check_init_model_state()
+        inputs = self.tokenizer.encode(word, return_tensors="pt")
+        outputs = self.model.transformer.wte.weight[inputs,:][0][0].detach().numpy().reshape(1, -1).tolist()[0]
+        return outputs
 
-sw_logger.info('Загружаем модель RU_BERT_CASED_MODEL')
-ru_bert_cased_tokenizer = AutoTokenizer.from_pretrained(sw_constants.RU_BERT_CASED_MODEL_PATH)
-ru_bert_cased_model = \
-    AutoModelWithLMHead.from_pretrained(sw_constants.RU_BERT_CASED_MODEL_PATH)
+    def check_init_model_state(self):
+        pass
 
-sw_logger.info('Загружаем модель SENTENCE_RU_BERT')
-sentence_ru_bert_tokenizer = AutoTokenizer.from_pretrained(sw_constants.SENTENCE_RU_BERT_MODEL_PATH)
-sentence_ru_bert_model = \
-    AutoModelWithLMHead.from_pretrained(sw_constants.SENTENCE_RU_BERT_MODEL_PATH)
 
-sw_logger.info('Загружаем модель SLAVIC_BERT')
-slavic_bert_tokenizer = AutoTokenizer.from_pretrained(sw_constants.SLAVIC_BERT_MODEL_PATH)
-slavic_bert_model = \
-    AutoModelWithLMHead.from_pretrained(sw_constants.SLAVIC_BERT_MODEL_PATH)
+class ELMoModelWrapper(BaseModelWrapper):
+    def __init__(self, model):
+        super(self.__class__, self).__init__(model)
 
-sw_logger.info('Загружаем модель BERT_BASE_MULTILINGUAL_UNCASED')
-bert_base_multilingual_uncased_tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-uncased')
-bert_base_multilingual_uncased_model = AutoModelWithLMHead.from_pretrained('bert-base-multilingual-uncased')
+    def get_embeddings(self, word):
+        super(self.__class__, self).check_init_model_state()
+        character_ids = batch_to_ids(word)
+        embeddings = self.model(character_ids)
+        return embeddings['elmo_representations'][1][0][0].detach().numpy().reshape(1, -1).tolist()
 
-sw_logger.info('Загружаем модель BERT_BASE_MULTILINGUAL_CASED')
-bert_base_multilingual_cased_tokenizer = AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
-bert_base_multilingual_cased_model = AutoModelWithLMHead.from_pretrained('bert-base-multilingual-cased')
 
-sw_logger.info('Загружаем модель ELMo: tayga_lemmas_elmo_2048_2019')
-elmo_model = Elmo(sw_constants.ELMO_MODEL_OPTIONS_FILE, sw_constants.ELMO_MODEL_WEIGHTS_FILE, 2, dropout=0)
+    def check_init_model_state(self):
+        pass
 
-sw_logger.info('Загружаем модель GPT: Russian GPT2 finetuning')
-gpt2_tokenizer = AutoTokenizer.from_pretrained(sw_constants.GPT2_MODEL_PATH)
-gpt2_model = AutoModelWithLMHead.from_pretrained(sw_constants.GPT2_MODEL_PATH)
 
-sw_logger.info('Загружаем модель Word2Vec (tayga, fasttext, B-o-W)')
-word2vec_model_file = os.path.join(sw_constants.WORD2VEC_MODEL_PATH, sw_constants.WORD2VEC_MODEL_FILE)
-word2vec_wrapper = gensim.models.KeyedVectors.load(word2vec_model_file)
+"""word2vec_tayga_bow_model = Word2VecModelWrapper(sw_constants.WORD2VEC_TAYGA_BOW_NAME)
+conversational_ru_bert_model = BertModelWrapper(sw_constants.CONVERSATIONAL_RU_BERT_NAME)
+RU_BERT_CASED_NAME
 
-sw_logger.info('Все модели загружены успешно!')
-
-# sw_logger.info('Загружаем пакет «stopwords» для nltk')
-# nltk.download("stopwords")
+RU_BERT_CASED_NAME = 'RU_BERT_CASED'
+SENTENCE_RU_BERT_NAME = 'SENTENCE_RU_BERT'
+SLAVIC_BERT_MODEL_NAME = 'SLAVIC_BERT_MODEL'
+BERT_BASE_MULTILINGUAL_UNCASED_NAME = 'BERT_BASE_MULTILINGUAL_UNCASED'
+BERT_BASE_MULTILINGUAL_CASED_NAME = 'BERT_BASE_MULTILINGUAL_CASED'
+ELMO_TAYGA_LEMMAS_2048_NAME = 'ELMO_TAYGA_LEMMAS_2048'
+GPT2_RUSSIAN_FINETUNING_NAME = """
 
 # TODO: Предсказатель и эмбеддинги на GPT-2
 # TODO: Эмбеддинги на ELMO без Deeppavlov скрипт конвертации: https://github.com/vlarine/transformers-ru

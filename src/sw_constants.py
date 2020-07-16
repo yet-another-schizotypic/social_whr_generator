@@ -25,11 +25,14 @@ SENTENCE_RU_BERT_MODEL_PATH = os.path.join(__project_path__, __sentence_ru_bert_
 __slavic_bert_model_relative_path__ = 'models/BERT/slavic_bert/bg_cs_pl_ru_cased_L-12_H-768_A-12_pt/'
 SLAVIC_BERT_MODEL_PATH = os.path.join(__project_path__, __slavic_bert_model_relative_path__)
 
-# bert-base-multilingual-uncased из Transformers, https://huggingface.co/transformers/pretrained_models.html
-BERT_BASE_MULTILINGUAL_UNCASED_PACKAGE_NAME = 'bert-base-multilingual-uncased'
+# bert-base-multilingual-uncased из Transformers, https://huggingface.co/bert-base-multilingual-uncased#list-files
+__bert_base_multilingual_uncased_model_relative_path__ = 'models/BERT/bert_base_multilingual_uncased/'
+BERT_BASE_MULTILINGUAL_UNCASED_MODEL_PATH = os.path.join(__project_path__, __bert_base_multilingual_uncased_model_relative_path__)
 
-# bert-base-multilingual-cased из Transformers, https://huggingface.co/transformers/pretrained_models.html
-BERT_BASE_MULTILINGUAL_CASED_PACKAGE_NAME = 'bert-base-multilingual-cased'
+# bert-base-multilingual-cased из Transformers, https://huggingface.co/bert-base-multilingual-cased#list-files
+__bert_base_multilingual_cased_model_relative_path__ = 'models/BERT/bert_base_multilingual_cased/'
+BERT_BASE_MULTILINGUAL_CASED_MODEL_PATH = os.path.join(__project_path__, __bert_base_multilingual_cased_model_relative_path__)
+
 
 #==Модель на основе архитектуры GPT, https://github.com/vlomme/Russian-gpt-2
 # Как получить:
@@ -69,62 +72,72 @@ __word2vec_model_relative_path__ = 'models/word2vec/tayga_none_fasttextcbow_300_
 WORD2VEC_MODEL_PATH = os.path.join(__project_path__, __word2vec_model_relative_path__)
 WORD2VEC_MODEL_FILE = os.path.join(WORD2VEC_MODEL_PATH, 'model.model')
 
-WORD2VEC_TAYGA_BOW = 'WORD2VEC_TAYGA_BOW'
-BERT = 'bert'
-ELMO = 'ELMo'
+WORD2VEC_TAYGA_BOW_NAME = 'WORD2VEC_TAYGA_BOW'
+CONVERSATIONAL_RU_BERT_NAME = 'CONVERSATIONAL_RU_BERT'
+RU_BERT_CASED_NAME = 'RU_BERT_CASED'
+SENTENCE_RU_BERT_NAME = 'SENTENCE_RU_BERT'
+SLAVIC_BERT_MODEL_NAME = 'SLAVIC_BERT_MODEL'
+BERT_BASE_MULTILINGUAL_UNCASED_NAME = 'BERT_BASE_MULTILINGUAL_UNCASED'
+BERT_BASE_MULTILINGUAL_CASED_NAME = 'BERT_BASE_MULTILINGUAL_CASED'
+ELMO_TAYGA_LEMMAS_2048_NAME = 'ELMO_TAYGA_LEMMAS_2048'
+GPT2_RUSSIAN_FINETUNING_NAME = 'GPT2_RUSSIAN_FINETUNING'
 
 # TODO: почитать про docstring и тройные кавычки
 
-SW_BERT_MODELS = {'CONVERSATIONAL_RU_BERT': CONVERSATIONAL_RU_BERT_MODEL_PATH, 'RU_BERT_CASED': RU_BERT_CASED_MODEL_PATH,
-             'SENTENCE_RU_BERT': SENTENCE_RU_BERT_MODEL_PATH, 'SLAVIC_BERT_MODEL': SLAVIC_BERT_MODEL_PATH,
-             'BERT_BASE_MULTILINGUAL_UNCASED': 'bert-base-multilingual-uncased',
-             'BERT_BASE_MULTILINGUAL_CASED': 'bert-base-multilingual-cased'}
+SW_BERT_MODELS = {BERT_BASE_MULTILINGUAL_UNCASED_NAME: BERT_BASE_MULTILINGUAL_UNCASED_MODEL_PATH,
+                  BERT_BASE_MULTILINGUAL_CASED_NAME: BERT_BASE_MULTILINGUAL_CASED_MODEL_PATH,
+                  CONVERSATIONAL_RU_BERT_NAME: CONVERSATIONAL_RU_BERT_MODEL_PATH, RU_BERT_CASED_NAME: RU_BERT_CASED_MODEL_PATH,
+                  SENTENCE_RU_BERT_NAME: SENTENCE_RU_BERT_MODEL_PATH, SLAVIC_BERT_MODEL_NAME: SLAVIC_BERT_MODEL_PATH}
 
-SW_WORD2VEC_MODELS = {WORD2VEC_TAYGA_BOW: WORD2VEC_MODEL_FILE}
-
+SW_WORD2VEC_MODELS = {WORD2VEC_TAYGA_BOW_NAME: WORD2VEC_MODEL_FILE}
 
 SW_SUPPORTED_MODELS = {**SW_BERT_MODELS, **SW_WORD2VEC_MODELS}
 
+SW_ELMO_MODELS = {ELMO_TAYGA_LEMMAS_2048_NAME: [ELMO_MODEL_OPTIONS_FILE, ELMO_MODEL_WEIGHTS_FILE]}
 
+SW_SUPPORTED_MODELS = {**SW_SUPPORTED_MODELS, **SW_ELMO_MODELS}
 
+SW_GPT2_MODELS = {GPT2_RUSSIAN_FINETUNING_NAME: GPT2_MODEL_PATH}
 
-NOUN_WORD2VEC_SUFFIX = '_NOUN'
+SW_SUPPORTED_MODELS = {**SW_SUPPORTED_MODELS, **SW_GPT2_MODELS}
 
-MAX_NEIGHBOUR_COSINE_DISTANCE_WORD2VEC = 0.650
-MIN_NEIGHBOUR_COSINE_DISTANCE_WORD2VEC = 0.320
-# Среднее гармоническое на «неправильной» выборке — 0.909286. Ниже — значение из «правильной».
-MIN_EXP_MEAN_TO_TARGET_COSINE_DISTANCE_WORD2VEC = 0.571643
-
-MAX_NEIGHBOUR_COSINE_DISTANCE_BERT = 0.07
-MIN_NEIGHBOUR_COSINE_DISTANCE_BERT = 0.02
-# Среднее гармоническое на «неправильной» выборке — 0,019015
-MIN_EXP_MEAN_TO_TARGET_COSINE_DISTANCE_BERT = 0.015532
-
-# Метрика для БЕРТА, тест, переделать. Среднее арифметическое по «правильной» выборке 611,948501
-THRESHOLD_FOR_RU_BERT_CONV_MODEL_CHAIN_VALIDITY = 612
-
-
-class ModelSpecificSettings:
-    data_type_for_nx_graph: str
-    clear_embeddings_vec: []
-    max_cosine_neighbourhood_distance: float
-    min_cosine_neighbourhood_distance: float
-    min_exp_mean_to_target_cosine_distance: float
-    threshold_for_ru_bert_conv_model_chain_validity: float
-
-    def __init__(self, model_type: str):
-
-        if model_type == WORD2VEC:
-            self.data_type_for_nx_graph = 'word2vec_embeddings'
-            self.clear_embeddings_vec = [0] * 300
-            self.max_cosine_neighbourhood_distance = MAX_NEIGHBOUR_COSINE_DISTANCE_WORD2VEC
-            self.min_cosine_neighbourhood_distance = MIN_NEIGHBOUR_COSINE_DISTANCE_WORD2VEC
-            self.min_exp_mean_to_target_cosine_distance = MIN_EXP_MEAN_TO_TARGET_COSINE_DISTANCE_WORD2VEC
-
-        if model_type == BERT:
-            self.data_type_for_nx_graph = 'bert_embeddings'
-            self.clear_embeddings_vec = [0] * 768
-            self.max_cosine_neighbourhood_distance = MAX_NEIGHBOUR_COSINE_DISTANCE_BERT
-            self.min_cosine_neighbourhood_distance = MIN_NEIGHBOUR_COSINE_DISTANCE_BERT
-            self.min_exp_mean_to_target_cosine_distance = MIN_EXP_MEAN_TO_TARGET_COSINE_DISTANCE_BERT
-            self.threshold_for_ru_bert_conv_model_chain_validity = THRESHOLD_FOR_RU_BERT_CONV_MODEL_CHAIN_VALIDITY
+# NOUN_WORD2VEC_SUFFIX = '_NOUN'
+#
+# MAX_NEIGHBOUR_COSINE_DISTANCE_WORD2VEC = 0.650
+# MIN_NEIGHBOUR_COSINE_DISTANCE_WORD2VEC = 0.320
+# # Среднее гармоническое на «неправильной» выборке — 0.909286. Ниже — значение из «правильной».
+# MIN_EXP_MEAN_TO_TARGET_COSINE_DISTANCE_WORD2VEC = 0.571643
+#
+# MAX_NEIGHBOUR_COSINE_DISTANCE_BERT = 0.07
+# MIN_NEIGHBOUR_COSINE_DISTANCE_BERT = 0.02
+# # Среднее гармоническое на «неправильной» выборке — 0,019015
+# MIN_EXP_MEAN_TO_TARGET_COSINE_DISTANCE_BERT = 0.015532
+#
+# # Метрика для БЕРТА, тест, переделать. Среднее арифметическое по «правильной» выборке 611,948501
+# THRESHOLD_FOR_RU_BERT_CONV_MODEL_CHAIN_VALIDITY = 612
+#
+#
+# class ModelSpecificSettings:
+#     data_type_for_nx_graph: str
+#     clear_embeddings_vec: []
+#     max_cosine_neighbourhood_distance: float
+#     min_cosine_neighbourhood_distance: float
+#     min_exp_mean_to_target_cosine_distance: float
+#     threshold_for_ru_bert_conv_model_chain_validity: float
+#
+#     def __init__(self, model_type: str):
+#
+#         if model_type == WORD2VEC:
+#             self.data_type_for_nx_graph = 'word2vec_embeddings'
+#             self.clear_embeddings_vec = [0] * 300
+#             self.max_cosine_neighbourhood_distance = MAX_NEIGHBOUR_COSINE_DISTANCE_WORD2VEC
+#             self.min_cosine_neighbourhood_distance = MIN_NEIGHBOUR_COSINE_DISTANCE_WORD2VEC
+#             self.min_exp_mean_to_target_cosine_distance = MIN_EXP_MEAN_TO_TARGET_COSINE_DISTANCE_WORD2VEC
+#
+#         if model_type == BERT:
+#             self.data_type_for_nx_graph = 'bert_embeddings'
+#             self.clear_embeddings_vec = [0] * 768
+#             self.max_cosine_neighbourhood_distance = MAX_NEIGHBOUR_COSINE_DISTANCE_BERT
+#             self.min_cosine_neighbourhood_distance = MIN_NEIGHBOUR_COSINE_DISTANCE_BERT
+#             self.min_exp_mean_to_target_cosine_distance = MIN_EXP_MEAN_TO_TARGET_COSINE_DISTANCE_BERT
+#             self.threshold_for_ru_bert_conv_model_chain_validity = THRESHOLD_FOR_RU_BERT_CONV_MODEL_CHAIN_VALIDITY

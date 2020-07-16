@@ -1,58 +1,28 @@
-# TODO:
-# Список хороших объяснений (где-то был) list
-# Список плохих цепочек (в Телеге)
-# Написать валидаторы по всем моделям и проверить, какой лучше
+import sw_constants
+from sw_modelswrapper import BertModelWrapper, ELMoModelWrapper, GPT2ModelWrapper, Word2VecModelWrapper
+import scipy
 
-from abc import ABCMeta, abstractmethod
+srb = BertModelWrapper(sw_constants.BERT_BASE_MULTILINGUAL_UNCASED_NAME)
+cat_emb = srb.get_embeddings('кот')
 
-class IInterface(metaclass=ABCMeta):
+for model_name in sw_constants.SW_SUPPORTED_MODELS:
+    print(model_name)
+    if 'BERT' in model_name:
+        mod = BertModelWrapper(model_name)
+    if 'GPT2' in model_name:
+        mod = GPT2ModelWrapper(model_name)
+    if 'WORD2VEC' in model_name:
+        mod = Word2VecModelWrapper(model_name)
+    if 'ELMO' in model_name:
+        mod = ELMoModelWrapper(model_name)
 
-    @classmethod
-    def version(self): return "1.0"
+    cat_emb = mod.get_embeddings('кот')
+    kitten_emb = mod.get_embeddings('котёнок')
+    train_emb = mod.get_embeddings('поезд')
 
-    @abstractmethod
-    def show(self): raise NotImplementedError
+    print('Кот - котёнок: расстояние {dist}'.format(dist=scipy.spatial.distance.cosine(cat_emb, kitten_emb)))
+    print('Поезд - котёнок: расстояние {dist}'.format(dist=scipy.spatial.distance.cosine(train_emb, kitten_emb)))
 
-
-
-class MyServer(IInterface):
-    def show(self):
-        print ('Hello, World 2!')
-
-class MyBadServer(object):
-    def show(self):
-        print ('Damn you, world!')
-
-
-class MyClient(object):
-
-    def __init__(self, server):
-        if not isinstance(server, IInterface): raise Exception('Bad interface')
-        if not IInterface.version() == '1.0': raise Exception('Bad revision')
-
-        self._server = server
-
-
-    def client_show(self):
-        self._server.show()
-
-
-# This call will fail with an exception
-try:
-    x = MyClient(MyBadServer)
-except Exception as exc:
-    print ('Failed as it should!')
-
-# This will pass with glory
-MyClient(MyServer()).client_show()
-
-
-from sw_core import *
-
-word1 = Word('хуй')
-word2 = Word('пизда')
-word3 = Word('жопа')
-word4 = Word('блядь')
 
 wrong_chains_by_humans = [[['болезнь'], ['игра'], ['дыра'], ['кислород']], ['петух']],\
                          [[['грудь'], ['галлюцинация'], ['книга'], ['пакет']], ['полицейский']],\

@@ -32,8 +32,6 @@ from nltk.corpus import stopwords
 from pymystem3 import Mystem
 from string import punctuation
 from itertools import chain
-from modelswrapper import (word2vec_wrapper, conversational_ru_bert_tokenizer,
-                           conversational_ru_bert_model)
 
 from transformers import top_k_top_p_filtering
 from collections import UserDict
@@ -60,7 +58,7 @@ class Math:
         #return matutils.unitvec(res)
         return res
 
-# Одно слово
+""" # Одно слово
 class Word:
     __title: str
     word2vec_title_inner: str
@@ -289,7 +287,7 @@ class ExplanationChain:
         seq = seq + ' | QUORUM: ' + str(total_decision)
         seq = seq + ' | human_ref: ' + str(human_decion)
         print(seq)
-
+"""
 #TODO: в граф — словарь, чтобы по многу раз не считать векторы
 #TODO: сохранение графа — super.save + словарь отдельно, не через pickle, чтобы можно было переписывать код класса
 #TODO: models: каждая модель — отдельный класс, начиная с BERT'ов. БЕРТЫ — задекорировать
