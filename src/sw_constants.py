@@ -6,12 +6,6 @@ LOGLEVEL = logging.INFO
 __project_path__ = pathlib.Path(__file__).parent.parent.absolute()
 # ===Основные константы===
 
-#==Пути до файлов модели Word2vec fasttext B-o-W==
-#Файл можно взять тут: https://rusvectores.org/ru/models/
-__word2vec_model_relative_path__ = 'models/word2vec/tayga_none_fasttextcbow_300_10_2019'
-WORD2VEC_MODEL_PATH = os.path.join(__project_path__, __word2vec_model_relative_path__)
-WORD2VEC_MODEL_FILE = 'model.model'
-
 #==Модели на основе архитектуры BERT==
 # В конфигурационный файл этоих модели нужно добавить строчку "output_hidden_states": "True", если её там нет
 #Conversational RuBERT, http://docs.deeppavlov.ai/en/master/features/models/bert.html
@@ -27,6 +21,7 @@ RU_BERT_CASED_MODEL_PATH = os.path.join(__project_path__, __ru_bert_cased_model_
 __sentence_ru_bert_model_relative_path__ = 'models/BERT/sentence_ru_bert/sentence_ru_cased_L-12_H-768_A-12_pt/'
 SENTENCE_RU_BERT_MODEL_PATH = os.path.join(__project_path__, __sentence_ru_bert_model_relative_path__)
 
+#Slavic BERT от deeppavlov, http://docs.deeppavlov.ai/en/master/features/models/bert.html
 __slavic_bert_model_relative_path__ = 'models/BERT/slavic_bert/bg_cs_pl_ru_cased_L-12_H-768_A-12_pt/'
 SLAVIC_BERT_MODEL_PATH = os.path.join(__project_path__, __slavic_bert_model_relative_path__)
 
@@ -59,21 +54,39 @@ BERT_BASE_MULTILINGUAL_CASED_PACKAGE_NAME = 'bert-base-multilingual-cased'
 #Далее переименовываем файлы:
 # mv encoder.json2 vocab.json
 # mv vocab2.bpe merges.txt
-__gpt2_model_relative_path__ = '/models/GPT2/Russian-gpt-2-finetuning/'
+__gpt2_model_relative_path__ = 'models/GPT2/Russian-gpt-2-finetuning/'
 GPT2_MODEL_PATH = os.path.join(__project_path__, __gpt2_model_relative_path__)
-GPT2_VOCAB_FILE = os.path.join(GPT2_MODEL_PATH, 'vocab.json')
-GPT2_MEETS_FILE = os.path.join(GPT2_MODEL_PATH, 'meets.txt')
 
 #ELMo, tayga_lemmas_elmo_2048_2019, https://rusvectores.org/ru/models/
-__elmo_model_relative_path__ = '/models/ELMo/tayga_lemmas_elmo_2048_2019/'
+__elmo_model_relative_path__ = 'models/ELMo/tayga_lemmas_elmo_2048_2019/'
 __elmo_model_path___ = os.path.join(__project_path__, __elmo_model_relative_path__)
 ELMO_MODEL_OPTIONS_FILE = os.path.join(__elmo_model_path___, 'options.json')
 ELMO_MODEL_WEIGHTS_FILE = os.path.join(__elmo_model_path___, 'model.hdf5')
 
+#==Пути до файлов модели Word2vec fasttext B-o-W==
+#Файл можно взять тут: https://rusvectores.org/ru/models/
+__word2vec_model_relative_path__ = 'models/word2vec/tayga_none_fasttextcbow_300_10_2019'
+WORD2VEC_MODEL_PATH = os.path.join(__project_path__, __word2vec_model_relative_path__)
+WORD2VEC_MODEL_FILE = os.path.join(WORD2VEC_MODEL_PATH, 'model.model')
 
-WORD2VEC = 'word2vec'
+WORD2VEC_TAYGA_BOW = 'WORD2VEC_TAYGA_BOW'
 BERT = 'bert'
 ELMO = 'ELMo'
+
+# TODO: почитать про docstring и тройные кавычки
+
+SW_BERT_MODELS = {'CONVERSATIONAL_RU_BERT': CONVERSATIONAL_RU_BERT_MODEL_PATH, 'RU_BERT_CASED': RU_BERT_CASED_MODEL_PATH,
+             'SENTENCE_RU_BERT': SENTENCE_RU_BERT_MODEL_PATH, 'SLAVIC_BERT_MODEL': SLAVIC_BERT_MODEL_PATH,
+             'BERT_BASE_MULTILINGUAL_UNCASED': 'bert-base-multilingual-uncased',
+             'BERT_BASE_MULTILINGUAL_CASED': 'bert-base-multilingual-cased'}
+
+SW_WORD2VEC_MODELS = {WORD2VEC_TAYGA_BOW: WORD2VEC_MODEL_FILE}
+
+
+SW_SUPPORTED_MODELS = {**SW_BERT_MODELS, **SW_WORD2VEC_MODELS}
+
+
+
 
 NOUN_WORD2VEC_SUFFIX = '_NOUN'
 
