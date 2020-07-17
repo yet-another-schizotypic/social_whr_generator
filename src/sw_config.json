@@ -1,0 +1,23 @@
+{
+    "sw_bert_models": {
+        "bert_base_multilingual_cased": "./models/BERT/bert_base_multilingual_cased/",
+        "bert_base_multilingual_uncased": "./models/BERT/bert_base_multilingual_uncased/",
+        "conversational_ru_bert": "./models/BERT/conversational_ru_bert/ru_conversational_cased_L-12_H-768_A-12_pt/",
+        "ru_bert_cased": "./models/BERT/ru_bert_cased/ru_bert_cased_l-12_H-768_A-12_pt/",
+        "sentence_ru_bert": "./models/BERT/sentence_ru_bert/sentence_ru_cased_L-12_H-768_A-12_pt/",
+        "slavic_bert_model": "./models/BERT/slavic_bert/bg_cs_pl_ru_cased_L-12_H-768_A-12_pt/"
+    },
+    "sw_elmo_models": {
+        "elmo_tayga_lemmas_2048": [
+            "./models/ELMo/tayga_lemmas_elmo_2048_2019/options.json",
+            "./models/ELMo/tayga_lemmas_elmo_2048_2019/model.hdf5"
+        ]
+    },
+    "sw_gpt2_models": {
+        "gpt2_russian_finetuning": "./models/GPT2/Russian-gpt-2-finetuning/"
+    },
+    "sw_word2vec_models": {
+        "word2vec_tayga_bow": "./models/word2vec/tayga_none_fasttextcbow_300_10_2019/model.model"
+    },
+    "version": "0.000"
+}

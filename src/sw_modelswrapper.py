@@ -1,13 +1,43 @@
 from sw_core import sw_logger
 import sw_constants
 import gensim
-import os
+import os, pathlib, json
 import torch
 from transformers import AutoModelWithLMHead, AutoTokenizer, BertModel
 import nltk
 from allennlp.modules.elmo import Elmo, batch_to_ids
 
-# TODO: переделать на классы, в которых и модели, и параметры, здесь просто создавать экземпляры
+
+class SWConfigParser:
+    def __init__(self, config_file_name=sw_constants.SW_CONFIG_FILE_NAME):
+        __project_path__ = pathlib.Path(__file__).parent.absolute()
+        config_file = os.path.join(__project_path__, config_file_name)
+        with open(config_file, 'r') as fp:
+            data = json.load(fp)
+        fp.close()
+        sw_supported_models = {}
+        for key, value in data.items():
+            if isinstance(value, dict):
+                for n, v in value.items():
+                    if isinstance(v, list):
+                        i = 0
+                        for element in v:
+                            if os.path.isdir(str('.' + element)) or os.path.isfile(str('.' + element)):
+                                v[i] = os.path.join(__project_path__, str('.' + v[i])).replace('/./', '/')
+                                i = i + 1
+                        sw_supported_models = {**sw_supported_models, **value}
+                    elif os.path.isdir(str('.' + v)) or os.path.isfile(str('.' + v)):
+                        value[n] = os.path.join(__project_path__, str('.' + v)).replace('/./', '/')
+                sw_supported_models = {**sw_supported_models, **value}
+
+
+
+        all_models = {'sw_supported_models': sw_supported_models}
+        data = {**data, **all_models}
+        self.config = data.copy()
+
+
+config_parser = SWConfigParser()
 
 # Чтобы ко всем моделям можно было обращаться одним образом, опишем интерфейс модели
 def abstractfunc(func):
@@ -49,7 +79,7 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
     def __init__(self, model_name):
         self.model = None
         self.tokenizer = None
-        if model_name in sw_constants.SW_SUPPORTED_MODELS:
+        if model_name in config_parser.config['sw_supported_models']:
             self.model_name = model_name
         else:
             raise Exception('Unsupported model type!')
@@ -64,26 +94,25 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
             sw_logger.info(
                 'Нам потребовалась модель, которая не была загружена:' +
                 ' {model_name}, загружаем её...'.format(model_name=self.model_name))
-            if self.model_name in sw_constants.SW_WORD2VEC_MODELS:
-                self.model = gensim.models.KeyedVectors.load(sw_constants.SW_WORD2VEC_MODELS[self.model_name])
+            if self.model_name in config_parser.config['sw_word2vec_models']:
+                self.model = gensim.models.KeyedVectors.load(config_parser.config['sw_word2vec_models'][self.model_name])
 
-            if (self.model_name in sw_constants.SW_BERT_MODELS) or (self.model_name in sw_constants.SW_GPT2_MODELS):
+            if (self.model_name in config_parser.config['sw_bert_models']) or (self.model_name in config_parser.config['sw_gpt2_models']):
                 self.tokenizer = AutoTokenizer.from_pretrained(
-                    sw_constants.SW_SUPPORTED_MODELS[self.model_name])
+                    config_parser.config['sw_supported_models'][self.model_name])
                 self.model = \
-                    AutoModelWithLMHead.from_pretrained(sw_constants.SW_SUPPORTED_MODELS[self.model_name])
+                    AutoModelWithLMHead.from_pretrained(config_parser.config['sw_supported_models'][self.model_name])
 
-            if self.model_name in sw_constants.SW_ELMO_MODELS:
-                self.model = Elmo(sw_constants.SW_SUPPORTED_MODELS[self.model_name][0],
-                                  sw_constants.SW_SUPPORTED_MODELS[self.model_name][1], 2,
+            if self.model_name in config_parser.config['sw_elmo_models']:
+                self.model = Elmo(config_parser.config['sw_supported_models'][self.model_name][0],
+                                  config_parser.config['sw_supported_models'][self.model_name][1], 2,
                                   dropout=0)
 
-            if self.model_name in sw_constants.SW_GPT2_MODELS:
+            if self.model_name in config_parser.config['sw_gpt2_models']:
                 self.tokenizer = AutoTokenizer.from_pretrained(
-                    sw_constants.SW_SUPPORTED_MODELS[self.model_name])
+                    config_parser.config['sw_supported_models'][self.model_name])
                 self.model = \
-                    AutoModelWithLMHead.from_pretrained(sw_constants.SW_SUPPORTED_MODELS[self.model_name])
-
+                    AutoModelWithLMHead.from_pretrained(config_parser.config['sw_supported_models'][self.model_name])
 
             sw_logger.info('Загрузка модели {model_name} завершена.'.format(model_name=self.model_name))
 
@@ -117,14 +146,14 @@ class Word2VecModelWrapper(BaseModelWrapper):
         pass
 
 
-class GPT2ModelWrapper(BaseModelWrapper):
+class gpt2ModelWrapper(BaseModelWrapper):
     def __init__(self, model):
         super(self.__class__, self).__init__(model)
 
     def get_embeddings(self, word):
         super(self.__class__, self).check_init_model_state()
         inputs = self.tokenizer.encode(word, return_tensors="pt")
-        outputs = self.model.transformer.wte.weight[inputs,:][0][0].detach().numpy().reshape(1, -1).tolist()[0]
+        outputs = self.model.transformer.wte.weight[inputs, :][0][0].detach().numpy().reshape(1, -1).tolist()[0]
         return outputs
 
     def check_init_model_state(self):
@@ -141,31 +170,41 @@ class ELMoModelWrapper(BaseModelWrapper):
         embeddings = self.model(character_ids)
         return embeddings['elmo_representations'][1][0][0].detach().numpy().reshape(1, -1).tolist()
 
-
     def check_init_model_state(self):
         pass
 
 
-"""word2vec_tayga_bow_model = Word2VecModelWrapper(sw_constants.WORD2VEC_TAYGA_BOW_NAME)
-conversational_ru_bert_model = BertModelWrapper(sw_constants.CONVERSATIONAL_RU_BERT_NAME)
-RU_BERT_CASED_NAME
+all_sw_models = {}
+for key, value in config_parser.config['sw_supported_models'].items():
+    if 'bert' in key:
+        all_sw_models[key] = BertModelWrapper(key)
+    if 'elmo' in key:
+        all_sw_models[key] = ELMoModelWrapper(key)
+    if 'word2vec' in key:
+        all_sw_models[key] = Word2VecModelWrapper(key)
+    if 'gpt2' in key:
+        all_sw_models[key] = gpt2ModelWrapper(key)
 
-RU_BERT_CASED_NAME = 'RU_BERT_CASED'
-SENTENCE_RU_BERT_NAME = 'SENTENCE_RU_BERT'
-SLAVIC_BERT_MODEL_NAME = 'SLAVIC_BERT_MODEL'
-BERT_BASE_MULTILINGUAL_UNCASED_NAME = 'BERT_BASE_MULTILINGUAL_UNCASED'
-BERT_BASE_MULTILINGUAL_CASED_NAME = 'BERT_BASE_MULTILINGUAL_CASED'
-ELMO_TAYGA_LEMMAS_2048_NAME = 'ELMO_TAYGA_LEMMAS_2048'
-GPT2_RUSSIAN_FINETUNING_NAME = """
+
+# # Экземпляры моделей для использования в остальных модклях. Готовые. Реальная загрузка — по требованию.
+# word2vec_tayga_bow_model = Word2VecModelWrapper(config_parser.config['sw_word2vec_models']['word2vec_TAYGA_BOW_NAME'])
+# conversational_ru_bert_model = BertModelWrapper(list(config_parser.config['sw_bert_models'].keys())[2])
+# ru_bert_cased_model = BertModelWrapper(config_parser.config['sw_bert_models']['sentence_ru_bert_NAME'])
+# sentence_ru_bert_model = BertModelWrapper(config_parser.config['sw_bert_models']['sentence_ru_bert_NAME'])
+# slavic_bert_model_model = BertModelWrapper(config_parser.config['sw_bert_models']['SLAVIC_bert_NAME'])
+# bert_base_multilingual_uncased_model = BertModelWrapper(list(config_parser.config['sw_bert_models'].keys())[1])
+# bert_base_multilingual_cased_model = BertModelWrapper(list(config_parser.config['sw_bert_models'].keys())[0])
+# elmo_tayga_lemmas_2048_model = BertModelWrapper(config_parser.config['sw_elmo_models']['elmo_TAYGA_LEMMAS_2048_NAME'])
+# gpt2_russian_finetuning_model = BertModelWrapper(config_parser.config['sw_gpt2_models']['gpt2_RUSSIAN_FINETUNING_NAME'])
 
 # TODO: Предсказатель и эмбеддинги на GPT-2
-# TODO: Эмбеддинги на ELMO без Deeppavlov скрипт конвертации: https://github.com/vlarine/transformers-ru
+# TODO: Эмбеддинги на elmo без Deeppavlov скрипт конвертации: https://github.com/vlarine/transformers-ru
 
-# TODO: Добавить ELMo и GPT2
+# TODO: Добавить ELMo и gpt2
 
 # TODO: списки / словари моделей и токенайзеров, интерфейсы MODEL и TOKENIZER
 
-# TODO: Загрузка GPT2 и ELMO, подумать над загрузкой on demand (сунуть загрузку в метод, выполняемый при выполнении
+# TODO: Загрузка gpt2 и elmo, подумать над загрузкой on demand (сунуть загрузку в метод, выполняемый при выполнении
 # любого метода класса)
 
 # TODO: most_similar_to_given - посмотреть, как сделано, реализовать (либо так же, либо через векторную СУБД,

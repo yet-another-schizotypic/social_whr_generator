@@ -1,25 +1,15 @@
 import sw_constants
-from sw_modelswrapper import BertModelWrapper, ELMoModelWrapper, GPT2ModelWrapper, Word2VecModelWrapper
+from sw_modelswrapper import all_sw_models
 import scipy
 
-srb = BertModelWrapper(sw_constants.BERT_BASE_MULTILINGUAL_UNCASED_NAME)
-cat_emb = srb.get_embeddings('кот')
+test = all_sw_models['word2vec_tayga_bow'].get_embeddings('кот')
+for key, value in all_sw_models.items():
 
-for model_name in sw_constants.SW_SUPPORTED_MODELS:
-    print(model_name)
-    if 'BERT' in model_name:
-        mod = BertModelWrapper(model_name)
-    if 'GPT2' in model_name:
-        mod = GPT2ModelWrapper(model_name)
-    if 'WORD2VEC' in model_name:
-        mod = Word2VecModelWrapper(model_name)
-    if 'ELMO' in model_name:
-        mod = ELMoModelWrapper(model_name)
+    cat_emb = value.get_embeddings('кот')
+    kitten_emb = value.get_embeddings('котёнок')
+    train_emb = value.get_embeddings('поезд')
 
-    cat_emb = mod.get_embeddings('кот')
-    kitten_emb = mod.get_embeddings('котёнок')
-    train_emb = mod.get_embeddings('поезд')
-
+    print(str(key))
     print('Кот - котёнок: расстояние {dist}'.format(dist=scipy.spatial.distance.cosine(cat_emb, kitten_emb)))
     print('Поезд - котёнок: расстояние {dist}'.format(dist=scipy.spatial.distance.cosine(train_emb, kitten_emb)))
 
