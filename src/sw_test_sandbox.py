@@ -49,7 +49,8 @@ for w1, w2 in itertools.combinations(word_list, 2):
     pb.print_progress_bar()
 sw_logger.info('Проверка на синонимичность завершена.')
 for element in word_list:
-    print(element.title)
+    #print(element.title)
+    pass
 
 # TODO: Прогнать словари через stopwords, чтобы там всяких предлогов не осталось
 # w = Word('картошка')

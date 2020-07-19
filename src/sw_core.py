@@ -135,14 +135,15 @@ class ProgressBar:
         """
         self.__iteration__ = self.__iteration__ + 1
         self.__operations_done__ = self.__operations_done__ + 1
-        if self.__iteration__ >= self.__epoch_length__ or self.__operations_done__ == 1:
+        if self.__iteration__ >= self.__epoch_length__ or self.__operations_done__ == 1\
+                or self.__operations_done__ >= self.__total__:
             iteration = self.__iteration__
             total = self.__total__
             operations_done = self.__operations_done__
 
             now_time = datetime.now()
             dt = now_time - self.__start_time__
-            avg_iter_duration = (dt.total_seconds() / iteration)
+            avg_iter_duration = (dt.total_seconds() / operations_done)
             est_time = round((total - operations_done) * avg_iter_duration)
             est_time = str(self.sec_to_hours(est_time))
 
