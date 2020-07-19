@@ -1,7 +1,3 @@
-
-
-
-
 # TODO:
 # 1. Вынести сюда Math и Word
 # 2. Стащить из Permutations генератор псевдо-рандомных выборок
@@ -16,6 +12,9 @@
 
 import sw_constants
 import logging
+import os, pathlib, json
+
+
 sw_logger = logging.getLogger('socialwhore_loger')
 sw_logger.setLevel(sw_constants.LOGLEVEL)
 sw_format = logging.Formatter('%(asctime)s - %(message)s')
@@ -38,6 +37,46 @@ from collections import UserDict
 import torch
 
 
+class SWConfigParser:
+    def __init__(self, config_file_name=sw_constants.SW_CONFIG_FILE_NAME):
+        __project_path__ = pathlib.Path(__file__).parent.absolute()
+        config_file = os.path.join(__project_path__, config_file_name)
+        with open(config_file, 'r') as fp:
+            data = json.load(fp)
+        fp.close()
+        n_m_flag = False
+        sw_supported_models = {}
+        for key, value in data.items():
+            n_m_flag = False
+            if isinstance(value, dict):
+                for n, v in value.items():
+                    if isinstance(v, list):
+                        i = 0
+                        for element in v:
+                            if os.path.isdir(str('.' + element)) or os.path.isfile(str('.' + element)):
+                                v[i] = os.path.join(__project_path__, str('.' + v[i])).replace('/./', '/')
+                                i = i + 1
+                        sw_supported_models = {**sw_supported_models, **value}
+                    elif isinstance(v, dict):
+                        for ke, vl in v.items():
+                            if os.path.isdir(str('.' + str(vl))) or os.path.isfile(str('.' + str(vl))):
+                                v[ke] = os.path.join(__project_path__, str('.' + v[ke])).replace('/./', '/')
+                                n_m_flag = True
+                        continue
+
+                    elif os.path.isdir(str('.' + v)) or os.path.isfile(str('.' + v)):
+                        value[n] = os.path.join(__project_path__, str('.' + v)).replace('/./', '/')
+                if n_m_flag is False:
+                    sw_supported_models = {**sw_supported_models, **value}
+
+        all_models = {'sw_supported_models': sw_supported_models}
+        data = {**data, **all_models}
+        self.config = data.copy()
+
+
+config_parser = SWConfigParser()
+
+
 # Набор всяких околоматематических штук
 class Math:
 
@@ -55,10 +94,13 @@ class Math:
             else:
                 res = np.add(np.array(res), np.array(vec))
             i += 1
-        #return matutils.unitvec(res)
+        # return matutils.unitvec(res)
         return res
 
-# TODO переписать Word c эмбеддингами в словарях
+
+
+
+
 # TODO загрузка циферок для модели из JSON (пока тупо на валидности цепочек)
 # TODO почитать про model.eval() и, возможно, заморозить модели или сделать выборку, по которой они будут подбирать константы
 # TODO сделать кворум классом
@@ -295,10 +337,10 @@ class ExplanationChain:
         seq = seq + ' | human_ref: ' + str(human_decion)
         print(seq)
 """
-#TODO: в граф — словарь, чтобы по многу раз не считать векторы
-#TODO: сохранение графа — super.save + словарь отдельно, не через pickle, чтобы можно было переписывать код класса
-#TODO: models: каждая модель — отдельный класс, начиная с BERT'ов. БЕРТЫ — задекорировать
-#TODO: Больше моделей в кворум
-#TODO: аналог mostsimilartogiven. Хотя бы просто по векторам, лучше по masked words
-#TODO: каждой вершине — простые атрибуты: сколько раз бралась эвристиками в рассмотрение, сколько раз объясняется, в скольки объяснениях участвует
-#TODO: Перенести модели отдельно, настроить git.
+# TODO: в граф — словарь, чтобы по многу раз не считать векторы
+# TODO: сохранение графа — super.save + словарь отдельно, не через pickle, чтобы можно было переписывать код класса
+# TODO: models: каждая модель — отдельный класс, начиная с BERT'ов. БЕРТЫ — задекорировать
+# TODO: Больше моделей в кворум
+# TODO: аналог mostsimilartogiven. Хотя бы просто по векторам, лучше по masked words
+# TODO: каждой вершине — простые атрибуты: сколько раз бралась эвристиками в рассмотрение, сколько раз объясняется, в скольки объяснениях участвует
+# TODO: Перенести модели отдельно, настроить git.

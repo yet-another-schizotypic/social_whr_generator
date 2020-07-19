@@ -17,7 +17,23 @@
         "gpt2_russian_finetuning": "./models/GPT2/Russian-gpt-2-finetuning/"
     },
     "sw_word2vec_models": {
-        "word2vec_tayga_bow": "./models/word2vec/tayga_none_fasttextcbow_300_10_2019/model.model"
+        "word2vec_tayga_bow": "./models/word2vec/tayga_none_fasttextcbow_300_10_2019/model.model",
+        "word2vec_araneum_fasttextskipgram_300": "./models/word2vec/araneum_none_fasttextskipgram_300_5_2018/araneum_none_fasttextskipgram_300_5_2018.model"
     },
-    "version": "0.000"
+    "sw_models_params_file": "sw_models_params.json",
+    "sw_frequency_dicts": {
+    	"lemma_num": {
+    		"path": "./data/lemma_num.json",
+    		"threshold": 12},
+    	"freqrnc2011": {
+    		"path": "./data/freqrnc2011.json",
+    		"threshold": 12121},
+    	"ru_full": {
+    		"path": "./data/ru_full.json",
+    		"threshold": 666}
+    }
 }
+
+
+
+
