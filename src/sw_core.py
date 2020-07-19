@@ -26,6 +26,7 @@ import math
 import numpy as np
 from gensim import matutils
 import scipy
+from datetime import datetime
 from torch.nn import functional as F
 from nltk.corpus import stopwords
 from pymystem3 import Mystem
@@ -99,6 +100,66 @@ class Math:
 
 
 
+class ProgressBar:
+    def __init__(self, total=1, epoch_length=None):
+        self.__total__ = total
+        if epoch_length is None:
+            self.__epoch_length__ = int(total * 0.01)
+        else:
+            self.__epoch_length__ = int(epoch_length)
+        if self.__epoch_length__ == 0:
+            self.__epoch_length__ = 1
+        self.__iteration__ = 0
+        self.__operations_done__ = 0
+        self.__start_time__ = datetime.now()
+
+    def sec_to_hours(self, seconds):
+        a = str(seconds // 3600)
+        b = str((seconds % 3600) // 60)
+        c = str((seconds % 3600) % 60)
+        d = "{} hours {} mins {} seconds".format(a, b, c)
+        return d
+
+    def print_progress_bar(self, prefix='', suffix='', decimals=1, length=100, fill='█'):
+        """
+        Call in a loop to create terminal progress bar
+        @params:
+            iteration   - Required  : current iteration (Int)
+            total       - Required  : total iterations (Int)
+            prefix      - Optional  : prefix string (Str)
+            suffix      - Optional  : suffix string (Str)
+            decimals    - Optional  : positive number of decimals in percent complete (Int)
+            length      - Optional  : character length of bar (Int)
+            fill        - Optional  : bar fill character (Str)
+            printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+        """
+        self.__iteration__ = self.__iteration__ + 1
+        self.__operations_done__ = self.__operations_done__ + 1
+        if self.__iteration__ >= self.__epoch_length__ or self.__operations_done__ == 1:
+            iteration = self.__iteration__
+            total = self.__total__
+            operations_done = self.__operations_done__
+
+            now_time = datetime.now()
+            dt = now_time - self.__start_time__
+            avg_iter_duration = (dt.total_seconds() / iteration)
+            est_time = round((total - operations_done) * avg_iter_duration)
+            est_time = str(self.sec_to_hours(est_time))
+
+            if self.__operations_done__ == 1:
+                est_time = 'неизвестно сколько, нужно ещё поработать, чтобы собрать статистику'
+
+            percent = ("{0:." + str(decimals) + "f}").format(100 * (operations_done / float(total)))
+            filledLength = int(length * operations_done // total)
+            bar = fill * filledLength + '-' * (length - filledLength)
+            suffix = f'Выполнено {operations_done} операций из {int(total)}, при такой скорости осталось ещё {est_time}.'
+            print(f'\r{prefix} |{bar}| {percent}% {suffix}')
+            # Print New Line on Complete
+            if iteration == total:
+                print()
+                self.__init__()
+            elif self.__operations_done__ != 1:
+                self.__iteration__ = 0
 
 
 # TODO загрузка циферок для модели из JSON (пока тупо на валидности цепочек)

@@ -1,26 +1,11 @@
 from sw_modelswrapper import all_sw_models, Word, nl_wrapper, Quorum
 import scipy
+from sw_core import sw_logger, ProgressBar
 import sw_constants, os
 import itertools
 
-import gensim
-
-import fasttext
-
-#ppp = '/Users/yet-another-schizotypic/Documents/__Develop/Социоблядь/social_whr_generator/models/word2vec/araneum_none_fasttextskipgram_300_5_2018/araneum_none_fasttextskipgram_300_5_2018.model'
-#model = gensim.models.fasttext.FastTextKeyedVectors.load(ppp)
-#d = scipy.spatial.distance.cosine(model.get_vector('кот'), model.get_vector('котейка'))
-
-w1 = Word('когтяра')
-#w1_freq = all_sw_models['word2vec_tayga_bow'].get_word_frequency(w1)
-#res = nl_wrapper.get_word_frequencies_data(w1)
-w2 = Word('котенька')
-#w2_freq = all_sw_models['word2vec_tayga_bow'].get_word_frequency(w2)
-#res = nl_wrapper.get_word_frequencies_data(w2)
-
-less_frequent_word = nl_wrapper.choose_less_frequent_word(w1, w2)
-# res = nl_wrapper.choose_more_frequent_word(w1, w2)
-
+# TODO: срезать верхушку у словарей
+# TODO: задать пороги частотности для словарей (на будущее)
 
 syn_file = os.path.join(sw_constants.SW_SCRIPT_PATH, 'synonyms4test.txt')
 out_syn_file = os.path.join(sw_constants.SW_SCRIPT_PATH, 'syns_out.txt')
@@ -30,6 +15,9 @@ if os.path.exists(out_syn_file):
 else:
     print("The file does not exist")
 
+# --------------------------------
+# TODO: Проверка существования файла и путь к нему
+
 with open(syn_file, "r") as fd:
     lines = fd.read().splitlines()
 
@@ -38,26 +26,32 @@ for line in lines:
     source_list.append(line.strip().lower())
 
 clean_list = list(dict.fromkeys(source_list))
+diff_count = len(source_list) - len(clean_list)
+if diff_count != 0:
+    sw_logger.info("Найдено {dc} буквальных дубликатов, дубликаты удалены.".format(dc=diff_count))
 
 word_list = []
-dist = 0
-sim = 0
 for element in clean_list:
     word_list.append(Word(element.strip().lower()))
 
+total_comb_count = scipy.special.comb(len(word_list), 2)
+pb = ProgressBar(total=total_comb_count, epoch_length=2000)
+
+sw_logger.info('Начинаем проверку на синонимичность')
 for w1, w2 in itertools.combinations(word_list, 2):
     syn_decision = Quorum.check_synonymy(w1, w2)
-    #syn_decision, sim = all_sw_models['word2vec_tayga_bow'].check_synonymy_by_relative_cosine_similarity(w1, w2)
-    #if syn_decision:
-    res_str = 'Слова: {w1} : {w2} : {syn_decision} : {sim}\n'.format(w1=w1.title, w2=w2.title, sim=sim, syn_decision=syn_decision)
-    print(res_str)
-    with open(out_syn_file, "a") as myfile:
-        myfile.write(res_str)
+    if syn_decision is True:
+        lfw = nl_wrapper.choose_less_frequent_word(w1, w2)
+        if lfw in word_list:
+            word_list.remove(lfw)
+            sw_logger.info('Слова «{w1}» и «{w2}» — синонимы (в понимании модели), слово «{lfw}» встречается реже, '
+                           'удаляем его.'.format(w1=w1.title, w2=w2.title, lfw=lfw.title))
+    pb.print_progress_bar()
+sw_logger.info('Проверка на синонимичность завершена.')
+for element in word_list:
+    print(element.title)
 
-
-
-
-
+# TODO: Прогнать словари через stopwords, чтобы там всяких предлогов не осталось
 # w = Word('картошка')
 # emb = w.get_word_embeddings('word2vec_tayga_bow')
 # print(emb)
@@ -182,4 +176,4 @@ for w1, w2 in itertools.combinations(word_list, 2):
 # #     t = loaded_test_chain.test_quorum_decision(True)
 #
 # #TODO: нарисовать граф с выразимостью, посмотреть визуально, попробовать определить свойства.
-#TODO: посмотреть, обо что и как можно нормализовать вероятность проверки БЕРТа (lognorm,например)
+# TODO: посмотреть, обо что и как можно нормализовать вероятность проверки БЕРТа (lognorm,например)
