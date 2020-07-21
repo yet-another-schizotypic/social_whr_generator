@@ -12,12 +12,18 @@ from allennlp.modules.elmo import Elmo, batch_to_ids
 import json, os
 import scipy
 from Levenshtein import distance as levenshtein_distance
+from sw_core import Math
 
 
-class Word:
+class Word(object):
     def __init__(self, title):
         self.__title__ = title.lower()
         self.__embeddings__ = None
+        self.__suggested_by__ = None
+        self.__tested_as_target__ = None
+        self.__tested_in_explanation_chains__ = None
+        self.__succeeded_as_target__ = None
+        self.__succeeded_in_explanation_chains__ = None
 
     def get_word_embeddings(self, model_name):
         if self.__embeddings__ is None:
@@ -36,6 +42,48 @@ class Word:
     def title(self):
         return self.__title__
 
+    @property
+    def suggested_by(self):
+        return self.__suggested_by__
+
+    @suggested_by.setter
+    def suggested_by(self, value):
+        self.__suggested_by__ = value
+
+    @property
+    def tested_as_target(self):
+        return self.__tested_as_target__
+
+    @tested_as_target.setter
+    def tested_as_target(self, value):
+        self.__tested_as_target__ = value
+
+    @property
+    def tested_in_explanation_chains(self):
+        return self.__tested_in_explanation_chains__
+
+    @tested_in_explanation_chains.setter
+    def tested_in_explanation_chains(self, value):
+        self.__tested_in_explanation_chains__ = value
+
+    @property
+    def succeeded_as_target(self):
+        return self.__succeeded_as_target__
+
+    @succeeded_as_target.setter
+    def succeeded_as_target(self, value):
+        self.__succeeded_as_target__ = value
+
+    @property
+    def succeeded_in_explanation_chains(self):
+        return self.__succeeded_in_explanation_chains__
+
+    @succeeded_in_explanation_chains.setter
+    def succeeded_in_explanation_chains(self, value):
+        self.__succeeded_in_explanation_chains__ = value
+
+
+    #TODO: геттеры и сеттеры для остальных
 
 class NLWrapper:
     def __init__(self):
@@ -47,32 +95,6 @@ class NLWrapper:
             self.__frequency_dicts__[key] = {}
             self.__frequency_dicts__[key]['data'] = data
             self.__frequency_dicts__[key]['threshold'] = value['threshold']
-
-    def choose_more_frequent_word(self, w1: Word, w2: Word):
-        w1_succeed_lookups = w2_succeed_lookups = 0
-        for i in range(0, len(self.__frequency_dicts__) - 1):
-            dict_name = list(self.__frequency_dicts__)[i]
-            w1_freq = self.__frequency_dicts__[dict_name].get(w1.title)
-            w2_freq = self.__frequency_dicts__[dict_name].get(w2.title)
-            if w1_freq is None or w2_freq is None:
-                if not (w1_freq is None):
-                    w1_succeed_lookups = w1_succeed_lookups + 1
-                if not (w2_freq is None):
-                    w2_succeed_lookups = w2_succeed_lookups + 1
-                continue
-            else:
-                if w1_freq >= w2_freq:
-                    return w1
-                else:
-                    return w2
-        if w1_succeed_lookups > w2_succeed_lookups:
-            return w1
-        if w1_succeed_lookups < w2_succeed_lookups:
-            return w2
-        if randint(0, 1):
-            return w1
-        else:
-            return w2
 
     def get_word_frequencies_data(self, w: Word):
         freqs = []
@@ -221,7 +243,7 @@ class BertModelWrapper(BaseModelWrapper):
         return embeddings
 
     def check_init_model_state(self):
-        pass
+        super(self.__class__, self).check_init_model_state()
 
     def check_synonymy(self, w1: Word, w2: Word):
         pass
@@ -237,7 +259,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
         pass
 
     def check_init_model_state(self):
-        pass
+        super(self.__class__, self).check_init_model_state()
 
     def check_synonymy(self, w1: Word, w2: Word):
         dist = scipy.spatial.distance.cosine(w1.get_word_embeddings(self.model_name),
@@ -265,6 +287,32 @@ class Word2VecModelWrapper(BaseModelWrapper):
         else:
             return freq.count
 
+    def check_explanation_chain_validity(self, target: Word, exp_chain: list):
+        super(self.__class__, self).check_init_model_state()
+        target_title = target.title
+        positive = []
+        for element in exp_chain:
+            positive.append(element.title)
+
+        suggestions = self.model.most_similar_cosmul(positive=positive)
+        if target_title in suggestions:
+            return True
+        else:
+            for s_word, s_sim in suggestions:
+                sim = self.model.similarity(target_title, s_word)
+                #print(target_title, s_word, sim)
+                if sim >= self.params['cosmul_similarity_for_chain_validation']:
+                    return True
+
+        res_vector = []
+        for element in exp_chain:
+            embeddings = element.get_word_embeddings(self.model_name)
+            res_vector = Math.sum_vectors(res_vector, embeddings)
+            suggestions = self.model.similar_by_vector(res_vector)
+            if target_title in suggestions:
+                return True
+
+        return False
 
 class gpt2ModelWrapper(BaseModelWrapper):
     def __init__(self, model):
@@ -277,7 +325,7 @@ class gpt2ModelWrapper(BaseModelWrapper):
         return outputs
 
     def check_init_model_state(self):
-        pass
+        super(self.__class__, self).check_init_model_state()
 
     def check_synonymy(self, w1: Word, w2: Word):
         pass
@@ -294,7 +342,7 @@ class ELMoModelWrapper(BaseModelWrapper):
         return embeddings['elmo_representations'][1][0][0].detach().numpy().reshape(1, -1).tolist()
 
     def check_init_model_state(self):
-        pass
+        super(self.__class__, self).check_init_model_state()
 
     def check_synonymy(self, w1: Word, w2: Word):
         pass

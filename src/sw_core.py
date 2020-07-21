@@ -14,7 +14,6 @@ import sw_constants
 import logging
 import os, pathlib, json
 
-
 sw_logger = logging.getLogger('socialwhore_loger')
 sw_logger.setLevel(sw_constants.LOGLEVEL)
 sw_format = logging.Formatter('%(asctime)s - %(message)s')
@@ -25,8 +24,8 @@ sw_logger.addHandler(sw_handler)
 import math
 import numpy as np
 from gensim import matutils
-import scipy
-from datetime import datetime
+import scipy, hashlib, base64
+from datetime import datetime, timedelta
 from torch.nn import functional as F
 from nltk.corpus import stopwords
 from pymystem3 import Mystem
@@ -86,18 +85,26 @@ class Math:
         return scipy.spatial.distance.cosine(vec1, vec2)
 
     @staticmethod
+    def get_hash(hashable, length:int):
+        hasher = hashlib.sha256()
+        hasher.update(repr(hashable).encode('utf-8'))
+        hash_sum = base64.urlsafe_b64encode(hasher.digest()[:length])
+        return hash_sum
+
+    @staticmethod
     def sum_vectors(*args):
         res: np.ndarray
         i = 0
         for vec in args:
             if i == 0:
+                if len(vec) == 0:
+                    vec = [0] * len(args[1])
                 res = np.array(vec)
             else:
                 res = np.add(np.array(res), np.array(vec))
             i += 1
         # return matutils.unitvec(res)
         return res
-
 
 
 class ProgressBar:
@@ -112,6 +119,7 @@ class ProgressBar:
         self.__iteration__ = 0
         self.__operations_done__ = 0
         self.__start_time__ = datetime.now()
+        self.__timer_mode__ = False
 
     def sec_to_hours(self, seconds):
         a = str(seconds // 3600)
@@ -120,22 +128,13 @@ class ProgressBar:
         d = "{} hours {} mins {} seconds".format(a, b, c)
         return d
 
-    def print_progress_bar(self, prefix='', suffix='', decimals=1, length=100, fill='█'):
-        """
-        Call in a loop to create terminal progress bar
-        @params:
-            iteration   - Required  : current iteration (Int)
-            total       - Required  : total iterations (Int)
-            prefix      - Optional  : prefix string (Str)
-            suffix      - Optional  : suffix string (Str)
-            decimals    - Optional  : positive number of decimals in percent complete (Int)
-            length      - Optional  : character length of bar (Int)
-            fill        - Optional  : bar fill character (Str)
-            printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
-        """
+    def print_progress_bar(self):
+        self.__print_progress_bar__()
+
+    def __print_progress_bar__(self, decimals=1, length=100, fill='█'):
         self.__iteration__ = self.__iteration__ + 1
         self.__operations_done__ = self.__operations_done__ + 1
-        if self.__iteration__ >= self.__epoch_length__ or self.__operations_done__ == 1\
+        if self.__iteration__ >= self.__epoch_length__ or self.__operations_done__ == 1 \
                 or self.__operations_done__ >= self.__total__:
             iteration = self.__iteration__
             total = self.__total__
@@ -154,13 +153,66 @@ class ProgressBar:
             filledLength = int(length * operations_done // total)
             bar = fill * filledLength + '-' * (length - filledLength)
             suffix = f'Выполнено {operations_done} операций из {int(total)}, при такой скорости осталось ещё {est_time}.'
-            print(f'\r{prefix} |{bar}| {percent}% {suffix}')
+            print(f'\r|{bar}| {percent}% {suffix}')
             # Print New Line on Complete
             if iteration == total:
                 print()
                 self.__init__()
             elif self.__operations_done__ != 1:
                 self.__iteration__ = 0
+
+
+class StopTimer:
+
+    def __init__(self, duration: str, tick: str):
+        self.__iteration__ = 0
+        self.__operations_done__ = 0
+        self.__start_time__ = datetime.now()
+        t = datetime.strptime(duration, "%H:%M:%S")
+        self.__max_duration__ = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+        t = datetime.strptime(tick, "%H:%M:%S")
+        self.__tick__ = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+        self.__total_ticks_count__ = round(self.__max_duration__ / self.__tick__)
+
+        self.__ticks_gone__ = 0
+        self.__ticks_printed__ = 0
+
+    def restart(self):
+        self.__init__()
+
+    def __timedelta_to_hours_minutes_seconds__(self, td):
+        seconds = td.total_seconds()
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        seconds = round(seconds % 60, 1)
+        return hours, minutes, seconds
+
+    def check_time_has_gone(self):
+        fill = '█'
+        if datetime.now() - self.__start_time__ > self.__max_duration__ + self.__tick__:
+            print(f'Фактическое количество операций:  {self.__operations_done__}')
+            return True
+        else:
+            self.__ticks_gone__ = (datetime.now() - self.__start_time__).total_seconds() / self.__tick__.total_seconds()
+            if (self.__operations_done__ == 0) or self.__ticks_gone__ > self.__ticks_printed__:
+                self.__ticks_printed__ = self.__ticks_printed__ + 1
+
+                operations_per_tick = self.__operations_done__ / self.__ticks_gone__
+                operation_prognosis = round(operations_per_tick * self.__total_ticks_count__)
+
+                time_gone = datetime.now() - self.__start_time__
+                hours, minutes, seconds = self.__timedelta_to_hours_minutes_seconds__(time_gone)
+                t_hours, t_minutes, t_seconds = self.__timedelta_to_hours_minutes_seconds__(self.__max_duration__)
+
+                suffix = f'Прошло {hours}::{minutes}::{seconds} из {t_hours}::{t_minutes}::{t_seconds}. '
+                suffix = suffix + f'Выполнено {self.__operations_done__ } операций. Прогноз {operation_prognosis}'
+
+                percent = ("{0:." + str(1) + "f}").format(100 * (self.__ticks_gone__ / float(self.__total_ticks_count__)))
+                filledLength = int(100 * self.__ticks_gone__ // self.__total_ticks_count__)
+                bar = fill * filledLength + '-' * (100 - filledLength)
+                print(f'\r|{bar}| {percent}% {suffix}')
+
+        self.__operations_done__ = self.__operations_done__ + 1
 
 
 # TODO загрузка циферок для модели из JSON (пока тупо на валидности цепочек)

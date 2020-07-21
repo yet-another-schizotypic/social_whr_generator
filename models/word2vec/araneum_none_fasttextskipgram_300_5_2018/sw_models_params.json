@@ -1,6 +1,7 @@
 {
     "synonymy_cosine_threshold": 0.28,
     "relative_cosine_similarity_threshold": 0.107747958,
+    "cosmul_similarity_for_chain_validation": 0.404,
 	"synonymy_prediction_threshold": 0.2,
 	"chain_validity_cosine_threshold": 0.7,
 	"chain_validity_prediction_threshold": 0.9

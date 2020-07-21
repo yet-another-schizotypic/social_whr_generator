@@ -1,17 +1,117 @@
+from random import randint
+
 import scipy
 from networkx import DiGraph
 import matplotlib.pyplot as plt
 import itertools
 import collections
+from sw_core import sw_logger, ProgressBar
+from sw_modelswrapper import Word, Quorum, nl_wrapper
+from collections.abc import MutableMapping
+import os
 
 
-class WordGraph(collections.UserDict, DiGraph):
-    def __init__(self):
+class WordGraph(MutableMapping, DiGraph):
 
-        pass
+    def __init__(self, incoming_graph_data=None, *args, **attr):
+        self.store = dict()
+        self.update(dict(*args, **attr))  # use the free update to set keys
+        super(DiGraph, self).__init__(incoming_graph_data=None, **attr)
+
+    def __getitem__(self, key):
+        return self.store[self.__keytransform__(key)]
+
+    def __setitem__(self, key, value):
+        self.store[self.__keytransform__(key)] = value
+
+    def __delitem__(self, key):
+        del self.store[self.__keytransform__(key)]
+
+    def __iter__(self):
+        return iter(self.store)
+
+    def __len__(self):
+        return len(self.store)
+
+    def __keytransform__(self, key):
+        return key
+
+    def get_all_words_from_dict(self):
+        res_list = []
+        for element in self.store.values():
+            res_list.append(element)
+        return res_list
+
+    def get_random_samples_chains(self, min_len, max_len, count):
+        chains_list = []
+        for i in range(0, count):
+            chain_len = randint(min_len, max_len)
+            used_indexes = []
+            flg = False
+            words_in_chain = []
+            rand_index = -1
+            for j in range(0, chain_len):
+                while flg is False:
+                    rand_index = randint(0, len(self) - 1)
+                    if not (rand_index in used_indexes):
+                        flg = True
+                        used_indexes.append(rand_index)
+
+                flg = False
+                word = list(self.store.values())[rand_index]
+                words_in_chain.append(word)
+
+            chains_list.append(words_in_chain)
+        return chains_list
 
 
-wg = WordGraph()
+    def initialize_from_file(self, filename, check_synonymy = False):
+        if os.path.exists(filename):
+            with open(filename, "r") as fd:
+                lines = fd.read().splitlines()
+        else:
+            raise ('Input file does not exist')
+
+        source_list = []
+        for line in lines:
+            source_list.append(line.strip().lower())
+
+        clean_list = list(dict.fromkeys(source_list))
+        diff_count = len(source_list) - len(clean_list)
+        if diff_count != 0:
+            sw_logger.info("Найдено {dc} буквальных дубликатов, дубликаты удалены.".format(dc=diff_count))
+
+        word_list = []
+        for element in clean_list:
+            word_list.append(Word(element.strip().lower()))
+
+        if check_synonymy is True:
+            total_comb_count = scipy.special.comb(len(word_list), 2)
+            pb = ProgressBar(total=total_comb_count, epoch_length=2000)
+            sw_logger.info('Начинаем проверку на синонимичность')
+            for w1, w2 in itertools.combinations(word_list, 2):
+                syn_decision = Quorum.check_synonymy(w1, w2)
+                if syn_decision is True:
+                    lfw = nl_wrapper.choose_less_frequent_word(w1, w2)
+                    if lfw in word_list:
+                        word_list.remove(lfw)
+                        sw_logger.info(
+                            'Слова «{w1}» и «{w2}» — синонимы (в понимании модели), слово «{lfw}» встречается реже, '
+                            'удаляем его.'.format(w1=w1.title, w2=w2.title, lfw=lfw.title))
+                pb.print_progress_bar()
+            sw_logger.info('Проверка на синонимичность завершена.')
+
+        for element in word_list:
+            element.suggested_by = 'human'
+            self[element.title] = element
+            super(DiGraph, self).add_node(element.title, suggested_by=element.suggested_by,
+                                          tested_as_target=element.tested_as_target,
+                                          tested_in_explanation_chains=element.tested_in_explanation_chains,
+                                          succeeded_as_target=element.succeeded_as_target,
+                                          succeeded_in_explanation_chains=element.succeeded_in_explanation_chains)
+
+
+words_graph = WordGraph()
 
 # class WordSet(nx.classes.graph.Graph):
 #     def load_from_word_list(self, word_list: list):
