@@ -1,8 +1,11 @@
+
+
 from sw_constants import SW_SCRIPT_OUTPUT_PATH
 import os, json
 import itertools
 from sw_modelswrapper import all_sw_models
-from sw_core import StopTimer, Math, sw_logger
+from sw_core import StopTimer, Math, sw_logger, config_parser
+from collections import Iterable
 
 
 
@@ -31,13 +34,20 @@ class Heuristics:
         hash_sum = hash_sum_str
         return prev_res, hash_sum
 
-    # TODO — в декоратор!
-    def find_canditates_chains_by_simple_cosmul(self, word_list, model_name):
-        # TODO брать его из конфига
-        output_dir = os.path.join(SW_SCRIPT_OUTPUT_PATH, 'heuristics/find_canditates_chains_by_simple_cosmul/')
+
+    def find_canditates_chains_by_processing_elements(self, iterable: Iterable, model_name, stop_timer: StopTimer,
+                                                      model_threshold_name: str, func):
+        output_dir = config_parser.config['sw_dirs']['output_dir']
         if not os.path.exists(output_dir):
+            assert isinstance(output_dir, object)
             os.mkdir(output_dir)
-        saved_file = os.path.join(output_dir, 'results_001.txt')
+
+        all_sw_models[model_name].check_init_model_state()
+        threshold = all_sw_models[model_name].params[model_threshold_name]
+
+        iterable_info = str(type(iterable)).replace("'",'').replace('<','').replace('>','').replace(' ','_')
+        saved_file_name = f'{model_name}-{iterable_info}-{model_threshold_name}={threshold}.txt'
+        saved_file = os.path.join(output_dir, saved_file_name)
 
         prev_results = {}
 
@@ -46,27 +56,20 @@ class Heuristics:
                 prev_res, prev_hash = self.unpack_string_from_prev_results(line)
                 prev_results[prev_hash] = prev_res
 
-        all_sw_models[model_name].check_init_model_state()
-
-        combinations = itertools.combinations(word_list, 6)
-        stop_timer = StopTimer(end_time="19:55:00", tick="00:05:00")
-        #TODO: параметры таймера из кода в вызов
-
-
-        for comb in combinations:
+        for element in iterable:
             if stop_timer.check_time_has_gone():
                 break
 
-            comb_str = self.unpack_word_objects_list(comb)
-            hash_sum = Math.get_hash(comb_str, 10)
-
+            comb_str = self.unpack_word_objects_list(element)
+            hash_sum = Math.get_hash(comb_str)
             if str(hash_sum) in prev_results.keys():
                 continue
 
-            target = comb[0]
-            exp_words = comb[1:]
-            comb_check_result = all_sw_models[model_name].check_explanation_chain_validity(target, exp_words)
+            target = element[0]
+            exp_words = element[1:]
+            comb_check_result = func(model_name=model_name, target=target, exp_words=exp_words)
             res_str = self.pack_heuristic_result_to_string(comb_check_result, hash_sum, comb_str[0], comb_str[1:])
+
             if comb_check_result is True:
                 sw_logger.info(f'Найден кандидат! Это строка: {res_str}')
             with open(saved_file, 'a') as fp:

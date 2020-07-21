@@ -31,7 +31,9 @@
     	"ru_full": {
     		"path": "./data/ru_full.json",
     		"threshold": 666}
-    }
+    },
+    "sw_dirs":{
+    	"output_dir": "./output/heuristics/"}
 }
 
 

@@ -85,10 +85,10 @@ class Math:
         return scipy.spatial.distance.cosine(vec1, vec2)
 
     @staticmethod
-    def get_hash(hashable, length: int):
+    def get_hash(hashable):
         hasher = hashlib.sha256()
         hasher.update(repr(hashable).encode('utf-8'))
-        hash_sum = base64.urlsafe_b64encode(hasher.digest()[:length])
+        hash_sum = base64.urlsafe_b64encode(hasher.digest())
         return hash_sum
 
     @staticmethod
@@ -200,9 +200,6 @@ class StopTimer:
         self.__ticks_gone__ = 0
         self.__ticks_printed__ = 0
 
-    def restart(self):
-        self.__init__()
-
     def __timedelta_to_hours_minutes_seconds__(self, td):
         seconds = td.total_seconds()
         hours = seconds // 3600
@@ -241,8 +238,6 @@ class StopTimer:
 
 # TODO загрузка циферок для модели из JSON (пока тупо на валидности цепочек)
 # TODO почитать про model.eval() и, возможно, заморозить модели или сделать выборку, по которой они будут подбирать константы
-# TODO сделать кворум классом
-# TODO реализовать проверку на синонимы — cosine и predictions
 # TODO реализовать проверку валидности цепочек в моделях и кворуме
 
 """ # Одно слово

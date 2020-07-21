@@ -43,8 +43,10 @@ class WordGraph(MutableMapping, DiGraph):
         return res_list
 
     def get_random_samples_chains(self, min_len, max_len, count):
+        pb = ProgressBar(total=count, epoch_length=100)
         chains_list = []
         for i in range(0, count):
+            pb.print_progress_bar()
             chain_len = randint(min_len, max_len)
             used_indexes = []
             flg = False
