@@ -1,11 +1,11 @@
 from datetime import datetime, timedelta
 # from sw_core import StopTimer
-#
-# st = StopTimer(duration="00:01:02", tick="00:00:5")
+# #st = StopTimer(duration="00:45:02", tick="00:00:5")
+# st = StopTimer(end_time="19:21:02", tick="00:00:5")
 # while True:
-#     if st.check_time_has_gone() is True:
-#         break
-#     pass
+#      if st.check_time_has_gone() is True:
+#          break
+#      pass
 
 from sw_graphs import WordGraph
 import sw_constants

@@ -49,20 +49,19 @@ class Heuristics:
         all_sw_models[model_name].check_init_model_state()
 
         combinations = itertools.combinations(word_list, 6)
-        stop_timer = StopTimer(duration="02:02:00", tick="00:10:00")
+        stop_timer = StopTimer(end_time="19:55:00", tick="00:05:00")
         #TODO: параметры таймера из кода в вызов
 
 
         for comb in combinations:
             if stop_timer.check_time_has_gone():
                 break
-            # TODO проверка по хэшам
+
             comb_str = self.unpack_word_objects_list(comb)
             hash_sum = Math.get_hash(comb_str, 10)
 
             if str(hash_sum) in prev_results.keys():
                 continue
-
 
             target = comb[0]
             exp_words = comb[1:]

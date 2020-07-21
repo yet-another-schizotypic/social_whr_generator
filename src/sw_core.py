@@ -25,7 +25,7 @@ import math
 import numpy as np
 from gensim import matutils
 import scipy, hashlib, base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from torch.nn import functional as F
 from nltk.corpus import stopwords
 from pymystem3 import Mystem
@@ -85,7 +85,7 @@ class Math:
         return scipy.spatial.distance.cosine(vec1, vec2)
 
     @staticmethod
-    def get_hash(hashable, length:int):
+    def get_hash(hashable, length: int):
         hasher = hashlib.sha256()
         hasher.update(repr(hashable).encode('utf-8'))
         hash_sum = base64.urlsafe_b64encode(hasher.digest()[:length])
@@ -164,12 +164,35 @@ class ProgressBar:
 
 class StopTimer:
 
-    def __init__(self, duration: str, tick: str):
+    def __init__(self, duration=None, tick=None, end_time=None):
+        if not (duration is None) and not (end_time is None):
+            raise ('Нужно выбрать либо длительность, либо время окончания')
         self.__iteration__ = 0
         self.__operations_done__ = 0
         self.__start_time__ = datetime.now()
-        t = datetime.strptime(duration, "%H:%M:%S")
-        self.__max_duration__ = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+
+        if not (end_time is None):
+            t = datetime.strptime(end_time, "%H:%M:%S")
+
+            if (t.hour <= self.__start_time__.hour) and (t.minute <= self.__start_time__.minute):
+                next_day = datetime.now() + timedelta(days=1)
+                year = next_day.year
+                month = next_day.month
+                day = next_day.day
+            else:
+                year = self.__start_time__.year
+                month = self.__start_time__.month
+                day = self.__start_time__.day
+
+            t = t.replace(year=year, day=day, month=month)
+
+            d = t - self.__start_time__
+            t_hours, t_minutes, t_seconds = self.__timedelta_to_hours_minutes_seconds__(d)
+            self.__max_duration__ = timedelta(hours=t_hours, minutes=t_minutes, seconds=t_seconds)
+        else:
+            t = datetime.strptime(duration, "%H:%M:%S")
+            self.__max_duration__ = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
+
         t = datetime.strptime(tick, "%H:%M:%S")
         self.__tick__ = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
         self.__total_ticks_count__ = round(self.__max_duration__ / self.__tick__)
@@ -205,9 +228,10 @@ class StopTimer:
                 t_hours, t_minutes, t_seconds = self.__timedelta_to_hours_minutes_seconds__(self.__max_duration__)
 
                 suffix = f'Прошло {hours}::{minutes}::{seconds} из {t_hours}::{t_minutes}::{t_seconds}. '
-                suffix = suffix + f'Выполнено {self.__operations_done__ } операций. Прогноз {operation_prognosis}'
+                suffix = suffix + f'Выполнено {self.__operations_done__} операций. Прогноз {operation_prognosis}'
 
-                percent = ("{0:." + str(1) + "f}").format(100 * (self.__ticks_gone__ / float(self.__total_ticks_count__)))
+                percent = ("{0:." + str(1) + "f}").format(
+                    100 * (self.__ticks_gone__ / float(self.__total_ticks_count__)))
                 filledLength = int(100 * self.__ticks_gone__ // self.__total_ticks_count__)
                 bar = fill * filledLength + '-' * (100 - filledLength)
                 print(f'\r|{bar}| {percent}% {suffix}')
