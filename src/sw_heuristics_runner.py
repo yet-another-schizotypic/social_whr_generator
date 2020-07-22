@@ -21,23 +21,29 @@ def check_by_combinations():
     combinations = itertools.combinations(word_list, 6)
     stop_timer = StopTimer(end_time="23:51:00", tick="00:02:00")
     heur = Heuristics()
-    heur.find_canditates_chains_by_processing_elements(iterable=combinations, model_name='word2vec_tayga_bow',
-                                                   stop_timer=stop_timer,
-                                                   model_threshold_name='cosmul_similarity_for_chain_validation',
-                                                   func=check_chain_validity_with_given_model)
+    heur.find_canditates_chains_by_processing_elements(iterable=combinations, model_name='m_russian_gpt2-aws',
+                                                       stop_timer=stop_timer,
+                                                       model_threshold_min='exp_loss_similarity_for_chain_validation_min',
+                                                       model_threshold_max='exp_loss_similarity_for_chain_validation_max',
+                                                       func=check_chain_validity_with_given_model)
+
 
 def check_by_random_samples(sample_count_per_one_run=1000000):
     fname = os.path.join(sw_constants.SW_SCRIPT_PATH, 'real_data_by_humans.txt')
     wg = WordGraph()
     wg.initialize_from_file(fname)
     word_list = wg.get_random_samples_chains(min_len=5, max_len=8, count=sample_count_per_one_run)
-    stop_timer = StopTimer(end_time="14:45:00", tick="00:05:00")
+    stop_timer = StopTimer(end_time="16:50:00", tick="00:05:00")
     heur = Heuristics()
     heur.find_canditates_chains_by_processing_elements(iterable=word_list, model_name='bert_base_multilingual_cased',
                                                        stop_timer=stop_timer,
-                                                       model_threshold_name='exp_loss_similarity_for_chain_validation_max',
+                                                       model_threshold_min = 'exp_loss_similarity_for_chain_validation_min',
+                                                       model_threshold_max='exp_loss_similarity_for_chain_validation_max',
+                                                       type_prefix='mv',
                                                        func=check_chain_validity_with_given_model)
 
+
+#TODO: протащить минимум в эвристику и имя выходного файла
 
 # def check_bert_with_permutations(sample_count_per_one_run=1000000):
 #     fname = os.path.join(sw_constants.SW_SCRIPT_PATH, 'real_data_by_humans.txt')
@@ -52,5 +58,9 @@ def check_by_random_samples(sample_count_per_one_run=1000000):
 #                                                        func=check_explanation_chain_validity_with_permutations)
 
 run = check_by_random_samples(1000000)
+#run = check_by_combinations()
 
 #run = check_bert_with_permutations(10000)
+
+#TODO: другие БЕРТы, ELMo, XLNET
+#TODO: найти табличную альтернативу экселю под MacOS

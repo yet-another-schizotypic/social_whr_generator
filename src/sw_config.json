@@ -14,7 +14,7 @@
         ]
     },
     "sw_gpt2_models": {
-        "gpt2_russian_finetuning": "./models/GPT2/Russian-gpt-2-finetuning/"
+        "m_russian_gpt2-aws": "./models/GPT2/m_russian_gpt2-aws/m_checkpoint-3364613"
     },
     "sw_word2vec_models": {
         "word2vec_tayga_bow": "./models/word2vec/tayga_none_fasttextcbow_300_10_2019/model.model",

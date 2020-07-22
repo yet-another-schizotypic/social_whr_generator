@@ -66,6 +66,7 @@ class SWConfigParser:
 
                     elif os.path.isdir(str('.' + v)) or os.path.isfile(str('.' + v)):
                         value[n] = os.path.join(__project_path__, str('.' + v)).replace('/./', '/')
+
                 if n_m_flag is False:
                     sw_supported_models = {**sw_supported_models, **value}
 
@@ -174,7 +175,7 @@ class StopTimer:
         if not (end_time is None):
             t = datetime.strptime(end_time, "%H:%M:%S")
 
-            if (t.hour <= self.__start_time__.hour) and (t.minute <= self.__start_time__.minute):
+            if (t.hour <= self.__start_time__.hour): # and (t.minute <= self.__start_time__.minute):
                 next_day = datetime.now() + timedelta(days=1)
                 year = next_day.year
                 month = next_day.month

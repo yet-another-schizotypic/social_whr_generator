@@ -5,9 +5,9 @@ from sw_core import sw_logger
 from sw_core import config_parser
 import itertools
 import gensim
-from pytorch_pretrained_bert import BertTokenizer, BertForMaskedLM
+from pytorch_pretrained_bert import BertTokenizer, BertForMaskedLM, GPT2LMHeadModel
 import torch
-from transformers import AutoModelWithLMHead, AutoTokenizer, BertModel
+from transformers import AutoModelWithLMHead, AutoTokenizer, BertModel, GPT2Tokenizer
 
 import nltk
 from allennlp.modules.elmo import Elmo, batch_to_ids
@@ -211,8 +211,7 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                         config_parser.config['sw_word2vec_models'][self.model_name])
                 params_file_dir = os.path.dirname(config_parser.config['sw_word2vec_models'][self.model_name])
 
-            if (self.model_name in config_parser.config['sw_bert_models']) or (
-                    self.model_name in config_parser.config['sw_gpt2_models']):
+            if (self.model_name in config_parser.config['sw_bert_models']): # or (self.model_name in config_parser.config['sw_gpt2_models']):
                 self.tokenizer = BertTokenizer.from_pretrained(
                     config_parser.config['sw_supported_models'][self.model_name])
                 self.model = \
@@ -227,10 +226,10 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                 params_file_dir = os.path.dirname(config_parser.config['sw_supported_models'][self.model_name][0])
 
             if self.model_name in config_parser.config['sw_gpt2_models']:
-                self.tokenizer = AutoTokenizer.from_pretrained(
+                self.tokenizer = GPT2Tokenizer.from_pretrained(
                     config_parser.config['sw_supported_models'][self.model_name])
                 self.model = \
-                    AutoModelWithLMHead.from_pretrained(config_parser.config['sw_supported_models'][self.model_name])
+                    GPT2LMHeadModel.from_pretrained(config_parser.config['sw_supported_models'][self.model_name])
                 params_file_dir = config_parser.config['sw_supported_models'][self.model_name]
 
             params_file = os.path.join(params_file_dir, config_parser.config['sw_models_params_file'])
@@ -277,9 +276,9 @@ class BertModelWrapper(BaseModelWrapper):
 
         if self.params['exp_loss_similarity_for_chain_validation_min'] <= score <= self.params['exp_loss_similarity_for_chain_validation_max'] :
             print(score)
-            return True
+            return True, score
         else:
-            return False
+            return False, score
 
     def check_explanation_chain_validity_with_permutations(self, target: Word, exp_chain: list):
         perms = itertools.permutations(exp_chain, len(exp_chain))
@@ -288,9 +287,9 @@ class BertModelWrapper(BaseModelWrapper):
             i = i + 1
             res = self.check_explanation_chain_validity(target, perm)
             if res is True:
-                return True
+                return True, score
 
-        return False
+        return False, score
 
 class Word2VecModelWrapper(BaseModelWrapper):
     def __init__(self, model):
@@ -339,13 +338,13 @@ class Word2VecModelWrapper(BaseModelWrapper):
 
         suggestions = self.model.most_similar_cosmul(positive=positive)
         if target_title in suggestions:
-            return True
+            return True, 100
         else:
             for s_word, s_sim in suggestions:
                 sim = self.model.similarity(target_title, s_word)
                 #print(target_title, s_word, sim)
                 if sim >= self.params['cosmul_similarity_for_chain_validation']:
-                    return True
+                    return True, sim
 
         res_vector = []
         for element in exp_chain:
@@ -353,9 +352,9 @@ class Word2VecModelWrapper(BaseModelWrapper):
             res_vector = Math.sum_vectors(res_vector, embeddings)
             suggestions = self.model.similar_by_vector(res_vector)
             if target_title in suggestions:
-                return True
+                return True, 50
 
-        return False
+        return False, 0
 
 class gpt2ModelWrapper(BaseModelWrapper):
     def __init__(self, model):
@@ -372,6 +371,22 @@ class gpt2ModelWrapper(BaseModelWrapper):
 
     def check_synonymy(self, w1: Word, w2: Word):
         pass
+
+    def check_explanation_chain_validity(self, target: Word, exp_chain: list):
+        super(self.__class__, self).check_init_model_state()
+        string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
+        string = re.sub(r"[^а-яА-Я]+", ' ', str(string))
+        tokenize_input = self.tokenizer.tokenize(string)
+        tensor_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokenize_input)])
+        loss = self.model(tensor_input, lm_labels=tensor_input)
+        score = math.exp(loss / len(tokenize_input))
+
+        if self.params['exp_loss_similarity_for_chain_validation_min'] <= score <= self.params[
+            'exp_loss_similarity_for_chain_validation_max']:
+            print(score)
+            return True, score
+        else:
+            return False, score
 
 
 class ELMoModelWrapper(BaseModelWrapper):
