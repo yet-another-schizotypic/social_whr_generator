@@ -1,6 +1,8 @@
 {
     "synonymy_cosine_threshold": 0.13,
 	"synonymy_prediction_threshold": 0.2,
+	"exp_loss_similarity_for_chain_validation_min": 0,
+	"exp_loss_similarity_for_chain_validation_max": 10,
 	"chain_validity_cosine_threshold": 0.7,
 	"chain_validity_prediction_threshold": 0.9
 }

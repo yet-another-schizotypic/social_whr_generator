@@ -3,19 +3,13 @@
 from sw_constants import SW_SCRIPT_OUTPUT_PATH
 import os, json
 import itertools
-from sw_modelswrapper import all_sw_models
+from sw_modelswrapper import all_sw_models, nl_wrapper
 from sw_core import StopTimer, Math, sw_logger, config_parser
 from collections import Iterable
 
 
 
 class Heuristics:
-    # TODO: если что, сделать её рекурсивной для вложенных списков
-    def unpack_word_objects_list(self, w_list: list):
-        res = []
-        for element in w_list:
-            res.append(element.title)
-        return res
 
     def pack_heuristic_result_to_string(self, res, hash_sum, target, exp_words):
         return  f'{bool(res)} : {hash_sum} | {target} =?= {exp_words}\n'
@@ -60,7 +54,7 @@ class Heuristics:
             if stop_timer.check_time_has_gone():
                 break
 
-            comb_str = self.unpack_word_objects_list(element)
+            comb_str = nl_wrapper.unpack_word_objects_list(element)
             hash_sum = Math.get_hash(comb_str)
             if str(hash_sum) in prev_results.keys():
                 continue

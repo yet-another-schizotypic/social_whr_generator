@@ -1,12 +1,14 @@
+import math
 from random import randint
-
+import re
 from sw_core import sw_logger
 from sw_core import config_parser
-import sw_constants
+import itertools
 import gensim
-
+from pytorch_pretrained_bert import BertTokenizer, BertForMaskedLM
 import torch
 from transformers import AutoModelWithLMHead, AutoTokenizer, BertModel
+
 import nltk
 from allennlp.modules.elmo import Elmo, batch_to_ids
 import json, os
@@ -104,6 +106,18 @@ class NLWrapper:
             freqs.append(float(w_freq))
         return freqs
 
+    # TODO: если что, сделать её рекурсивной для вложенных списков
+    def unpack_word_objects_list(self, w_list: list):
+        res = []
+        for element in w_list:
+            res.append(element.title)
+        return res
+
+    def unpack_word_objects_target_exp(self, target, w_list: list):
+        res = [target.title]
+        res.append(self.unpack_word_objects_list(w_list))
+        return res
+
     def choose_less_frequent_word(self, w1: Word, w2: Word):
         w1_freqs = self.get_word_frequencies_data(w1)
         w2_freqs = self.get_word_frequencies_data(w2)
@@ -199,11 +213,12 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
 
             if (self.model_name in config_parser.config['sw_bert_models']) or (
                     self.model_name in config_parser.config['sw_gpt2_models']):
-                self.tokenizer = AutoTokenizer.from_pretrained(
+                self.tokenizer = BertTokenizer.from_pretrained(
                     config_parser.config['sw_supported_models'][self.model_name])
                 self.model = \
-                    AutoModelWithLMHead.from_pretrained(config_parser.config['sw_supported_models'][self.model_name])
+                    BertForMaskedLM.from_pretrained(config_parser.config['sw_supported_models'][self.model_name])
                 params_file_dir = config_parser.config['sw_supported_models'][self.model_name]
+                self.model.eval()
 
             if self.model_name in config_parser.config['sw_elmo_models']:
                 self.model = Elmo(config_parser.config['sw_supported_models'][self.model_name][0],
@@ -248,6 +263,34 @@ class BertModelWrapper(BaseModelWrapper):
     def check_synonymy(self, w1: Word, w2: Word):
         pass
 
+    def check_explanation_chain_validity(self, target: Word, exp_chain: list):
+        super(self.__class__, self).check_init_model_state()
+        string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
+        string = re.sub(r"[^а-яА-Я]+", ' ', str(string))
+        tokenize_input = self.tokenizer.tokenize(string)
+        tensor_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokenize_input)])
+        predictions = self.model(tensor_input)
+
+        loss_fct = torch.nn.CrossEntropyLoss()
+        loss = loss_fct(predictions.squeeze(), tensor_input.squeeze()).data
+        score = math.exp(loss / len(tokenize_input))
+
+        if self.params['exp_loss_similarity_for_chain_validation_min'] <= score <= self.params['exp_loss_similarity_for_chain_validation_max'] :
+            print(score)
+            return True
+        else:
+            return False
+
+    def check_explanation_chain_validity_with_permutations(self, target: Word, exp_chain: list):
+        perms = itertools.permutations(exp_chain, len(exp_chain))
+        i = 0
+        for perm in perms:
+            i = i + 1
+            res = self.check_explanation_chain_validity(target, perm)
+            if res is True:
+                return True
+
+        return False
 
 class Word2VecModelWrapper(BaseModelWrapper):
     def __init__(self, model):
