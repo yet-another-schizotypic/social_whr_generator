@@ -4,25 +4,23 @@ from sw_core import sw_logger, ProgressBar
 import sw_constants, os
 import itertools
 import operator
+from sw_graphs import WordGraph
 
+def combinations_test():
+    fname = os.path.join(sw_constants.SW_SCRIPT_PATH, 'real_data_by_humans.txt')
+    wg = WordGraph()
+    wg.initialize_from_file(fname)
+    word_list = wg.get_all_words_from_dict()
+    combinations = itertools.combinations(word_list, 6)
+    total_comb_count = scipy.special.comb(len(word_list), 6)
+    pb = ProgressBar(total=total_comb_count, epoch_length=1000000)
+    for comb in combinations:
+        #print(comb[0].title)
+        pb.print_progress_bar()
 
+run = combinations_test()
 
-from collections.abc import MutableMapping
-# Генератор цепочек
-# from sw_graphs import words_graph
-# fname = os.path.join(sw_constants.SW_SCRIPT_PATH, 'real_data_by_humans.txt')
-# words_graph.initialize_from_file(fname)
-# chains = words_graph.get_random_samples_chains(min_len=4, max_len=11, count=1000)
-# new_chains_with_titles = []
-# for i in range(0, len(chains)):
-#     chn = chains[i]
-#     tmp_chn = []
-#     for element in chn:
-#         tmp_chn.append(element.title)
-#     new_chains_with_titles.append(tmp_chn)
-# print(new_chains_with_titles)
-#/Генератор цепочек
-
+# Подбор коэффициентов под модели
 #===== TODO: завернуть в функцию, пригодится. Параметры: from, to, step.
 filename = os.path.join(sw_constants.SW_SCRIPT_PATH, 'mixed_chains_by_humans.txt')
 if os.path.exists(filename):

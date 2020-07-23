@@ -84,8 +84,8 @@ class Word(object):
     def succeeded_in_explanation_chains(self, value):
         self.__succeeded_in_explanation_chains__ = value
 
+    # TODO: геттеры и сеттеры для остальных
 
-    #TODO: геттеры и сеттеры для остальных
 
 class NLWrapper:
     def __init__(self):
@@ -211,7 +211,8 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                         config_parser.config['sw_word2vec_models'][self.model_name])
                 params_file_dir = os.path.dirname(config_parser.config['sw_word2vec_models'][self.model_name])
 
-            if (self.model_name in config_parser.config['sw_bert_models']): # or (self.model_name in config_parser.config['sw_gpt2_models']):
+            if (self.model_name in config_parser.config[
+                'sw_bert_models']):  # or (self.model_name in config_parser.config['sw_gpt2_models']):
                 self.tokenizer = BertTokenizer.from_pretrained(
                     config_parser.config['sw_supported_models'][self.model_name])
                 self.model = \
@@ -231,6 +232,7 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                 self.model = \
                     GPT2LMHeadModel.from_pretrained(config_parser.config['sw_supported_models'][self.model_name])
                 params_file_dir = config_parser.config['sw_supported_models'][self.model_name]
+                self.model.eval()
 
             params_file = os.path.join(params_file_dir, config_parser.config['sw_models_params_file'])
             with open(params_file, 'r') as fp:
@@ -274,7 +276,8 @@ class BertModelWrapper(BaseModelWrapper):
         loss = loss_fct(predictions.squeeze(), tensor_input.squeeze()).data
         score = math.exp(loss / len(tokenize_input))
 
-        if self.params['exp_loss_similarity_for_chain_validation_min'] <= score <= self.params['exp_loss_similarity_for_chain_validation_max'] :
+        if self.params['exp_loss_similarity_for_chain_validation_min'] <= score <= self.params[
+            'exp_loss_similarity_for_chain_validation_max']:
             print(score)
             return True, score
         else:
@@ -290,6 +293,7 @@ class BertModelWrapper(BaseModelWrapper):
                 return True, score
 
         return False, score
+
 
 class Word2VecModelWrapper(BaseModelWrapper):
     def __init__(self, model):
@@ -342,7 +346,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
         else:
             for s_word, s_sim in suggestions:
                 sim = self.model.similarity(target_title, s_word)
-                #print(target_title, s_word, sim)
+                # print(target_title, s_word, sim)
                 if sim >= self.params['cosmul_similarity_for_chain_validation']:
                     return True, sim
 
@@ -355,6 +359,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
                 return True, 50
 
         return False, 0
+
 
 class gpt2ModelWrapper(BaseModelWrapper):
     def __init__(self, model):
@@ -383,7 +388,7 @@ class gpt2ModelWrapper(BaseModelWrapper):
 
         if self.params['exp_loss_similarity_for_chain_validation_min'] <= score <= self.params[
             'exp_loss_similarity_for_chain_validation_max']:
-            print(score)
+
             return True, score
         else:
             return False, score

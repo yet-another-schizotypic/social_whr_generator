@@ -87,7 +87,7 @@ class Math:
 
     @staticmethod
     def get_hash(hashable):
-        hasher = hashlib.sha256()
+        hasher = hashlib.sha3_512()
         hasher.update(repr(hashable).encode('utf-8'))
         hash_sum = base64.urlsafe_b64encode(hasher.digest())
         return hash_sum

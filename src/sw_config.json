@@ -33,7 +33,8 @@
     		"threshold": 666}
     },
     "sw_dirs":{
-    	"output_dir": "./output/heuristics/"}
+    	"output_dir": "./output/heuristics/",
+    	"file_heuristics_dir": "./output/heuristics/fileheuristics/"}
 }
 
 
