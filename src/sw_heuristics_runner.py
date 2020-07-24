@@ -84,9 +84,10 @@ def produce_append_big_file_for_model_tests(sample_count_per_one_run):
 
 #run = produce_append_big_file_for_model_tests(10000000)
 
-run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048'], True)
+#run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048'], True)
+run = Heuristics.do_precomputations_by_file([], True)
 
-# TODO: другие БЕРТы, ELMo, XLNEThash_sum
+# TODO: другие БЕРТы, ELMo, XLNET
 # TODO: найти табличную альтернативу экселю под MacOS
 # TODO: В таймер добавить вывод скорости per 1000, например или per minute
 # TODO: Semantic similarity отсюда в word2vec: https://habr.com/ru/post/275913/

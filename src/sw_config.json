@@ -18,7 +18,9 @@
     },
     "sw_word2vec_models": {
         "word2vec_tayga_bow": "./models/word2vec/tayga_none_fasttextcbow_300_10_2019/model.model",
-        "word2vec_araneum_fasttextskipgram_300": "./models/word2vec/araneum_none_fasttextskipgram_300_5_2018/araneum_none_fasttextskipgram_300_5_2018.model"
+        "word2vec_araneum_fasttextskipgram_300": "./models/word2vec/araneum_none_fasttextskipgram_300_5_2018/araneum_none_fasttextskipgram_300_5_2018.model",
+        "word2vec_ruscorpora_none_fasttextskipgram": "./models/word2vec/ruscorpora_none_fasttextskipgram/181/model.model"
+        
     },
     "sw_models_params_file": "sw_models_params.json",
     "sw_frequency_dicts": {

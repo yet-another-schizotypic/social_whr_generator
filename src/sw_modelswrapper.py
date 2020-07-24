@@ -224,6 +224,7 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                 self.model = Elmo(config_parser.config['sw_supported_models'][self.model_name][0],
                                   config_parser.config['sw_supported_models'][self.model_name][1], 2,
                                   dropout=0)
+                #self.elmo_embedder()
                 params_file_dir = os.path.dirname(config_parser.config['sw_supported_models'][self.model_name][0])
 
             if self.model_name in config_parser.config['sw_gpt2_models']:
@@ -276,9 +277,7 @@ class BertModelWrapper(BaseModelWrapper):
         loss = loss_fct(predictions.squeeze(), tensor_input.squeeze()).data
         score = math.exp(loss / len(tokenize_input))
 
-        if self.params['exp_loss_similarity_for_chain_validation_min'] <= score <= self.params[
-            'exp_loss_similarity_for_chain_validation_max']:
-            print(score)
+        if (self.params['exp_loss_similarity_for_chain_validation_min'] <= score) and (score <= self.params['exp_loss_similarity_for_chain_validation_max']):
             return True, score
         else:
             return False, score
@@ -358,7 +357,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
             if target_title in suggestions:
                 return True, 50
 
-        return False, 0
+        return False, sim
 
 
 class gpt2ModelWrapper(BaseModelWrapper):
@@ -380,15 +379,13 @@ class gpt2ModelWrapper(BaseModelWrapper):
     def check_explanation_chain_validity(self, target: Word, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
         string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', str(string))
+        string = re.sub(r"[^а-яА-Я]+", ' ', str(string)).strip()
         tokenize_input = self.tokenizer.tokenize(string)
         tensor_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokenize_input)])
         loss = self.model(tensor_input, lm_labels=tensor_input)
         score = math.exp(loss / len(tokenize_input))
 
-        if self.params['exp_loss_similarity_for_chain_validation_min'] <= score <= self.params[
-            'exp_loss_similarity_for_chain_validation_max']:
-
+        if (self.params['exp_loss_similarity_for_chain_validation_min'] <= score)  and (score <= self.params['exp_loss_similarity_for_chain_validation_max']):
             return True, score
         else:
             return False, score
@@ -409,6 +406,28 @@ class ELMoModelWrapper(BaseModelWrapper):
 
     def check_synonymy(self, w1: Word, w2: Word):
         pass
+
+    def check_explanation_chain_validity(self, target: Word, exp_chain: list):
+        super(self.__class__, self).check_init_model_state()
+        string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
+        string = re.sub(r"[^а-яА-Я]+", ' ', str(string)).strip()
+        exp_vec = string.split(' ')
+        target_title = exp_vec[0]
+        exp_titles = exp_vec[1:]
+        #full_vec = [target_title, ['хуй'], exp_titles]
+        full_vec = [target_title, exp_titles]
+        ids = batch_to_ids(full_vec)
+        embeddings = self.model(ids)
+        target_embs = embeddings['elmo_representations'][1][0][0].detach().numpy().reshape(1, -1).tolist()
+        exp_embs = embeddings['elmo_representations'][1][1][0].detach().numpy().reshape(1, -1).tolist()
+        # TODO: если будет плохо себя вести, взять с другого слоя ['elmo_representations'][0],
+        # см. https://github.com/allenai/allennlp/issues/1789
+        dist = scipy.spatial.distance.cosine(target_embs, exp_embs)
+
+        if (self.params['vec_similarity_for_chain_validation_min'] <= dist) and (dist <= self.params['vec_similarity_for_chain_validation_max']):
+            return True, dist
+        else:
+            return False, dist
 
 
 all_sw_models = {}

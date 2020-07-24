@@ -137,14 +137,14 @@ class Heuristics:
             f'Кривой рандом допустил {total_collisions} совпадений, поэтому реально добавили только {total_added} записей')
 
     @staticmethod
-    def file_len(fname):
-        with open(fname) as f:
+    def file_len(file_name):
+        with open(file_name) as f:
             for i, l in enumerate(f):
                 pass
         return i + 1
 
     @staticmethod
-    def do_precomputations_by_file(unsupported_models: list, do_equity: bool):
+    def do_precomputations_by_file(unsupported_models: list, do_equity: bool, next_step_count=100000):
         f_h_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
         out_dir = os.path.join(f_h_dir, 'models_output/')
         if not os.path.exists(out_dir):
@@ -174,14 +174,14 @@ class Heuristics:
             model_name = min_precomputations[0]
             if max_diff == 0:
                 if (max_precomputations[1] == 0) or do_equity is False:
-                    max_diff = 100000
+                    max_diff = next_step_count
                     sw_logger.info(f'Работать, негры! Сейчас {model_name} будет делать ещё {max_diff} цепочек!')
                 elif do_equity is True:
                     do_next_step = False
                     sw_logger.info(f'Свобода, равенство, браство! Все модели обработали {max_precomputations[1]} цепочек.')
                     break
 
-            pb = ProgressBar(total=max_diff, epoch_length=(max_diff // 100))
+            pb = ProgressBar(total=max_diff, epoch_length=(max_diff // 500))
 
             sw_logger.info(f'Сейчас нужно, чтобы {model_name} обработала {max_diff} цепочек.')
             model_output_file = models_output_files[model_name]
@@ -228,8 +228,8 @@ class Heuristics:
                     t_min_name = 'exp_loss_similarity_for_chain_validation_min'
                     t_max_name = 'exp_loss_similarity_for_chain_validation_max'
                 if 'elmo' in model_name:
-                    t_min_name = 'not_implemented_in_sw'
-                    t_max_name = 'not_implemented_in_sw'
+                    t_min_name = 'vec_similarity_for_chain_validation_min'
+                    t_max_name = 'vec_similarity_for_chain_validation_max'
                 if 'xlnet' in model_name:
                     t_min_name = 'not_implemented_in_sw'
                     t_max_name = 'not_implemented_in_sw'
