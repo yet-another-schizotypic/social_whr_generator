@@ -207,6 +207,37 @@ class CSVBuffer:
                     self.used_hashes[line['hash_sum']] = True
 
 
+
+class CSVReader(CSVBuffer):
+    def __init__(self, total_operations: int, input_file_name: str, check_hashes_file_name: str):
+        pass
+
+    def __read_csv_file_to_inner_buffer__(self, include_header=False):
+        self.buffer_list = []
+        with open(self.file_name) as fp:
+            reader = csv.reader(fp)
+            header = next(reader)
+            if include_header is True:
+                self.buffer_list.append(header)
+            i = 0
+            for line in reader:
+                self.buffer_list.append(line)
+                i += 1
+                if i > self.buffer_size:
+                    break
+
+    def read_line_from_csv_fle(self):
+        if len(self.buffer_list) == 0:
+            self.__read_csv_file_to_inner_buffer__()
+        for element in self.buffer_list:
+            yield element
+        self.buffer_list = []
+
+
+class CSVWriter(CSVBuffer):
+    def __init__(self, total_operations: int, output_file_name: str, header: list):
+        super().__init__(total_operations, output_file_name, header)
+
     def flush(self):
         self.write_csv_header(print_warning=False)
         print(f'Сбрасываю буффер из {len(self.buffer_list)} записей в файл {self.file_name}')
@@ -239,29 +270,6 @@ class CSVBuffer:
             writer = csv.writer(fp, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerow(self.header)
         fp.close()
-
-    def __read_csv_file_to_inner_buffer__(self, include_header=False):
-        self.buffer_list = []
-        with open(self.file_name) as fp:
-            reader = csv.reader(fp)
-            header = next(reader)
-            if include_header is True:
-                self.buffer_list.append(header)
-            i = 0
-            for line in reader:
-                self.buffer_list.append(line)
-                i += 1
-                if i > self.buffer_size:
-                    break
-
-    def read_line_from_csv_fle(self):
-        if len(self.buffer_list) == 0:
-            self.__read_csv_file_to_inner_buffer__()
-        for element in self.buffer_list:
-            yield element
-        self.buffer_list = []
-
-
 
 # Набор всяких околоматематических штук
 class Math:

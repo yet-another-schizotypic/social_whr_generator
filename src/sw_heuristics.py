@@ -5,7 +5,7 @@ from sw_constants import SW_SCRIPT_OUTPUT_PATH
 import os, json
 import itertools
 from sw_modelswrapper import all_sw_models, nl_wrapper, Word
-from sw_core import StopTimer, Math, sw_logger, config_parser, ProgressBar, SWUtils, CSVBuffer
+from sw_core import StopTimer, Math, sw_logger, config_parser, ProgressBar, SWUtils, CSVWriter, CSVReader
 from collections.abc import Iterable
 
 
@@ -274,7 +274,7 @@ class Heuristics:
 
         csv_headers = ['hash_sum', 'model_name', 'depth_of_generations', 'generation_type', 'target', 'exp_words']
         chains_file_len = SWUtils.get_file_len(chains_file)
-        sw_csv = CSVBuffer(total_operations=chains_file_len, file_name=output_file, header=csv_headers)
+        sw_csv = CSVWriter(total_operations=chains_file_len, output_file_name=output_file, header=csv_headers)
         pb = ProgressBar(total=chains_file_len)
         unpacker = Heuristics.unpack_ipmproved_chain_result_for_csv_writing
         for chain in csv_reader:
