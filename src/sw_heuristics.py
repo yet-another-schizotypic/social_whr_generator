@@ -282,8 +282,9 @@ class Heuristics:
             exp_words = chain['exp_words'].replace('[','').replace("'",'').replace(']','').split(', ')
             improved_chains = []
             for i in range(0, 4):
-                res = all_sw_models['word2vec_tayga_bow'].improve_chain(target, exp_words,
-                                                                                    vocabulary, voc_vecs, 6, i)
+                res = all_sw_models['word2vec_tayga_bow'].improve_chain(target=target, exp_chain=exp_words,
+                                                                        vocab_list=vocabulary, word_vecs=voc_vecs,
+                                                                        depth=7, type_gen=i)
                 improved_chains.append(res)
             row = (unpacker, improved_chains)
             sw_csv.write_csv(row)
