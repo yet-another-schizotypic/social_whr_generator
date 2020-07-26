@@ -9,6 +9,10 @@
 # 8. Класс chain с проверками валидности
 # 9. Добавить разных БЕРТов, отврефакторить имеющийся
 # 10. Ембеддинги DistilBert, Elmo
+import itertools
+from random import randint
+
+import typing
 
 import sw_constants
 import logging
@@ -21,20 +25,11 @@ sw_handler = logging.StreamHandler()
 sw_handler.setFormatter(sw_format)
 sw_logger.addHandler(sw_handler)
 
-import math
 import numpy as np
-from gensim import matutils
+
 import scipy, hashlib, base64
 from datetime import datetime, timedelta, time
-from torch.nn import functional as F
-from nltk.corpus import stopwords
-from pymystem3 import Mystem
-from string import punctuation
-from itertools import chain
-
-from transformers import top_k_top_p_filtering
-from collections import UserDict
-import torch
+import csv
 
 
 class SWConfigParser:
@@ -78,7 +73,213 @@ class SWConfigParser:
 config_parser = SWConfigParser()
 
 
-# Набор всяких околоматематических штук
+class SWUtils:
+
+    # TODO переделать на CSV, удалить аналог из Heuristics
+    @staticmethod
+    def unpack_string_from_saved_precomputations_file(string):
+        s = string.strip(' ').split(' | ')[0]
+        prev_res_str = s.split(' : ')[0]
+        if prev_res_str == 'True':
+            prev_res = True
+        elif prev_res_str == 'False':
+            prev_res = True
+        else:
+            prev_res = 'UNK'
+        results_1 = s.split(' : ')
+        hash_sum_str = results_1[1]
+        # hash_sum = hash_sum_str.strip("'")
+        hash_sum = hash_sum_str
+        threshold_min_str = results_1[2]
+        threshold_max_str = results_1[3]
+        type_prefix_str = results_1[4]
+        model_name_str = results_1[5]
+        metric_res = results_1[6]
+
+        s = string.strip(' ').split(' | ')[1]
+        results_2 = s.split(' =?= ')
+        target = results_2[0]
+        exp_words = results_2[1].replace("[", '').replace("'", '').replace(',', '').replace(']', '').replace('\n', '')
+        exp_words = exp_words.split(' ')
+        return prev_res, hash_sum, threshold_min_str, threshold_max_str, type_prefix_str, model_name_str, metric_res, target, exp_words
+
+    @staticmethod
+    def get_file_len(file_name):
+        if not os.path.exists(file_name):
+            return 0
+        with open(file_name) as f:
+            for i, l in enumerate(f):
+                pass
+        return i + 1
+
+    @staticmethod
+    # TODO: переделать на CSV
+    def get_used_hashes_from_file(file_name):
+        if not (os.path.isfile(file_name) and os.path.exists(file_name)):
+            return {}
+        if SWUtils.get_file_len(file_name) == 1:
+            return {}
+        file_len = SWUtils.get_file_len(file_name)
+        pb = ProgressBar(total=file_len)
+        hash_dict = {}
+        for line in open(file_name, 'r'):
+            _, hash_sum, _, _, _, _, _, _, _ = SWUtils.unpack_string_from_saved_precomputations_file(line)
+            hash_dict[hash_sum] = True
+            pb.print_progress_bar()
+        return hash_dict
+
+    @staticmethod
+    def generate_quasi_random_samples_from_string_list(string_list: list, min_len, max_len, count):
+        pb = ProgressBar(total=count)
+        chains_list = []
+        for i in range(0, count):
+            chain_len = randint(min_len, max_len)
+            used_indexes = []
+            flg = False
+            words_in_chain = []
+            rand_index = -1
+            for j in range(0, chain_len):
+                while flg is False:
+                    rand_index = randint(0, len(string_list) - 1)
+                    if not (rand_index in used_indexes):
+                        flg = True
+                        used_indexes.append(rand_index)
+                flg = False
+                word = string_list[rand_index]
+                words_in_chain.append(word)
+            chains_list.append(words_in_chain)
+            pb.print_progress_bar()
+        return chains_list
+
+    @staticmethod
+    def read_vocab_without_duplicates(file_name, check_synonymy: bool):
+        if os.path.exists(file_name):
+            with open(file_name, "r") as fd:
+                lines = fd.read().splitlines()
+        else:
+            raise ValueError('Input file does not exist')
+
+        source_list = []
+        for line in lines:
+            source_list.append(line.strip().lower())
+
+        clean_list = list(dict.fromkeys(source_list))
+        diff_count = len(source_list) - len(clean_list)
+        if diff_count != 0:
+            sw_logger.info("Найдено {dc} буквальных дубликатов, дубликаты удалены.".format(dc=diff_count))
+
+        # TODO: этот кусок не работает, и неизвестно, понадобится ли. К удалению.
+        if check_synonymy is True:
+            raise ValueError('Not implemented')
+        #     total_comb_count = scipy.special.comb(len(clean_list), 2)
+        #     pb = ProgressBar(total=total_comb_count)
+        #     sw_logger.info('Начинаем проверку на синонимичность')
+        #     for w1, w2 in itertools.combinations(clean_list, 2):
+        #         syn_decision = Quorum.check_synonymy(w1, w2)
+        #         if syn_decision is True:
+        #             lfw = nl_wrapper.choose_less_frequent_word(w1, w2)
+        #             if lfw in word_list:
+        #                 word_list.remove(lfw)
+        #                 sw_logger.info(
+        #                     'Слова «{w1}» и «{w2}» — синонимы (в понимании модели), слово «{lfw}» встречается реже, '
+        #                     'удаляем его.'.format(w1=w1.title, w2=w2.title, lfw=lfw.title))
+        #         pb.print_progress_bar()
+        #     sw_logger.info('Проверка на синонимичность завершена.')
+        return clean_list
+
+    @staticmethod
+    def unpack_word_objects_list_to_string_list(word_object_list):
+        return [word.title for word in word_object_list]
+
+
+# Буффер CSV
+class CSVBuffer:
+    def __init__(self, total_operations: int, file_name: str, header: list):
+        if total_operations is None:
+            self.buffer_size = 1000
+        if total_operations >= 1000000:
+            self.buffer_size = 50000
+        elif total_operations >= 500000:
+            self.buffer_size = 15000
+        elif total_operations >= 100000:
+            self.buffer_size = 10000
+        elif total_operations >= 10000:
+            self.buffer_size = 2000
+        elif total_operations >= 1000:
+            self.buffer_size = 200
+        elif total_operations >= 100:
+            self.buffer_size = 10
+        else:
+            self.buffer_size = 5
+
+        self.buffer_list = []
+        self.file_name = file_name
+        self.header = header
+        self.used_hashes = {}
+        if SWUtils.get_file_len(self.file_name) > 1:
+            with open(self.file_name) as fp:
+                reader = csv.DictReader(fp)
+                for line in reader:
+                    self.used_hashes[line['hash_sum']] = True
+
+
+    def flush(self):
+        self.write_csv_header(print_warning=False)
+        print(f'Сбрасываю буффер из {len(self.buffer_list)} записей в файл {self.file_name}')
+        with open(self.file_name, 'a') as fp:
+            writer = csv.writer(fp, quoting=csv.QUOTE_NONNUMERIC)
+            for element in self.buffer_list:
+                writer.writerow(element)
+        fp.close()
+        self.buffer_list = []
+        print('Запись завершена, буффер чист.')
+
+    def write_csv(self, row):
+        assert row[0], typing.Callable
+        unpacker = row[0]
+        lines = unpacker(row[1])
+        for line in lines:
+            if line[0] in self.used_hashes.keys():
+                continue
+            self.used_hashes[line[0]] = True
+            self.buffer_list.append(line)
+        if len(self.buffer_list) > self.buffer_size:
+            self.flush()
+
+    def write_csv_header(self, print_warning=False):
+        if os.path.exists(self.file_name):
+            if print_warning is True:
+                print(f'Попытка перезаписать существующий csv-файл {self.file_name}')
+            return None
+        with open(self.file_name, 'w') as fp:
+            writer = csv.writer(fp, quoting=csv.QUOTE_NONNUMERIC)
+            writer.writerow(self.header)
+        fp.close()
+
+    def __read_csv_file_to_inner_buffer__(self, include_header=False):
+        self.buffer_list = []
+        with open(self.file_name) as fp:
+            reader = csv.reader(fp)
+            header = next(reader)
+            if include_header is True:
+                self.buffer_list.append(header)
+            i = 0
+            for line in reader:
+                self.buffer_list.append(line)
+                i += 1
+                if i > self.buffer_size:
+                    break
+
+    def read_line_from_csv_fle(self):
+        if len(self.buffer_list) == 0:
+            self.__read_csv_file_to_inner_buffer__()
+        for element in self.buffer_list:
+            yield element
+        self.buffer_list = []
+
+        # Набор всяких околоматематических штук
+
+
 class Math:
 
     @staticmethod
@@ -112,7 +313,18 @@ class ProgressBar:
     def __init__(self, total=1, epoch_length=None):
         self.__total__ = total
         if epoch_length is None:
-            self.__epoch_length__ = int(total * 0.01)
+            if total > 100000000:
+                self.__epoch_length__ = 100000
+            elif total >= 10000000:
+                self.__epoch_length__ = 50000
+            elif total >= 1000000:
+                self.__epoch_length__ = 10000
+            elif total >= 100000:
+                self.__epoch_length__ = 500
+            elif total <= 1000:
+                self.__epoch_length__ = 10
+            else:
+                self.__epoch_length__ = total // 100
         else:
             self.__epoch_length__ = int(epoch_length)
         if self.__epoch_length__ == 0:
@@ -175,7 +387,7 @@ class StopTimer:
         if not (end_time is None):
             t = datetime.strptime(end_time, "%H:%M:%S")
 
-            if (t.hour <= self.__start_time__.hour): # and (t.minute <= self.__start_time__.minute):
+            if (t.hour <= self.__start_time__.hour):  # and (t.minute <= self.__start_time__.minute):
                 next_day = datetime.now() + timedelta(days=1)
                 year = next_day.year
                 month = next_day.month

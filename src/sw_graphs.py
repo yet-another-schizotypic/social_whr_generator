@@ -5,9 +5,10 @@ from networkx import DiGraph
 import matplotlib.pyplot as plt
 import itertools
 import collections
-from sw_core import sw_logger, ProgressBar
+from sw_core import sw_logger, ProgressBar, SWUtils
 from sw_modelswrapper import Word, Quorum, nl_wrapper
 from collections.abc import MutableMapping
+
 import os
 
 
@@ -42,66 +43,39 @@ class WordGraph(MutableMapping, DiGraph):
             res_list.append(element)
         return res_list
 
-    def get_random_samples_chains(self, min_len, max_len, count):
-        pb = ProgressBar(total=count, epoch_length=100)
-        chains_list = []
-        for i in range(0, count):
-            pb.print_progress_bar()
-            chain_len = randint(min_len, max_len)
-            used_indexes = []
-            flg = False
-            words_in_chain = []
-            rand_index = -1
-            for j in range(0, chain_len):
-                while flg is False:
-                    rand_index = randint(0, len(self) - 1)
-                    if not (rand_index in used_indexes):
-                        flg = True
-                        used_indexes.append(rand_index)
 
-                flg = False
-                word = list(self.store.values())[rand_index]
-                words_in_chain.append(word)
+    #Deprecated:
+    # def get_random_samples_chains(self, min_len, max_len, count):
+    #     pb = ProgressBar(total=count, epoch_length=100)
+    #     chains_list = []
+    #     for i in range(0, count):
+    #         pb.print_progress_bar()
+    #         chain_len = randint(min_len, max_len)
+    #         used_indexes = []
+    #         flg = False
+    #         words_in_chain = []
+    #         rand_index = -1
+    #         for j in range(0, chain_len):
+    #             while flg is False:
+    #                 rand_index = randint(0, len(self) - 1)
+    #                 if not (rand_index in used_indexes):
+    #                     flg = True
+    #                     used_indexes.append(rand_index)
+    #
+    #             flg = False
+    #             word = list(self.store.values())[rand_index]
+    #             words_in_chain.append(word)
+    #
+    #         chains_list.append(words_in_chain)
+    #     return chains_list
 
-            chains_list.append(words_in_chain)
-        return chains_list
 
+    def initialize_from_file(self, file_name, check_synonymy = False):
 
-    def initialize_from_file(self, filename, check_synonymy = False):
-        if os.path.exists(filename):
-            with open(filename, "r") as fd:
-                lines = fd.read().splitlines()
-        else:
-            raise ('Input file does not exist')
-
-        source_list = []
-        for line in lines:
-            source_list.append(line.strip().lower())
-
-        clean_list = list(dict.fromkeys(source_list))
-        diff_count = len(source_list) - len(clean_list)
-        if diff_count != 0:
-            sw_logger.info("Найдено {dc} буквальных дубликатов, дубликаты удалены.".format(dc=diff_count))
-
+        clean_list = SWUtils.read_vocab_without_dublicates(file_name, check_synonymy)
         word_list = []
         for element in clean_list:
             word_list.append(Word(element.strip().lower()))
-
-        if check_synonymy is True:
-            total_comb_count = scipy.special.comb(len(word_list), 2)
-            pb = ProgressBar(total=total_comb_count, epoch_length=2000)
-            sw_logger.info('Начинаем проверку на синонимичность')
-            for w1, w2 in itertools.combinations(word_list, 2):
-                syn_decision = Quorum.check_synonymy(w1, w2)
-                if syn_decision is True:
-                    lfw = nl_wrapper.choose_less_frequent_word(w1, w2)
-                    if lfw in word_list:
-                        word_list.remove(lfw)
-                        sw_logger.info(
-                            'Слова «{w1}» и «{w2}» — синонимы (в понимании модели), слово «{lfw}» встречается реже, '
-                            'удаляем его.'.format(w1=w1.title, w2=w2.title, lfw=lfw.title))
-                pb.print_progress_bar()
-            sw_logger.info('Проверка на синонимичность завершена.')
 
         for element in word_list:
             element.suggested_by = 'human'

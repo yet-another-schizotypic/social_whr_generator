@@ -1,7 +1,16 @@
 import math
 from random import randint
 import re
-from sw_core import sw_logger
+
+from future.utils import string_types
+from gensim import matutils
+from gensim.models.word2vec_inner import REAL
+
+from numpy import dot
+
+from gensim import utils, matutils
+
+from sw_core import sw_logger, SWUtils
 from sw_core import config_parser
 import itertools
 import gensim
@@ -9,7 +18,7 @@ from pytorch_pretrained_bert import BertTokenizer, BertForMaskedLM, GPT2LMHeadMo
 import torch
 from transformers import AutoModelWithLMHead, AutoTokenizer, BertModel, GPT2Tokenizer
 
-import nltk
+import numpy as np
 from allennlp.modules.elmo import Elmo, batch_to_ids
 import json, os
 import scipy
@@ -210,6 +219,7 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                     self.model = gensim.models.KeyedVectors.load(
                         config_parser.config['sw_word2vec_models'][self.model_name])
                 params_file_dir = os.path.dirname(config_parser.config['sw_word2vec_models'][self.model_name])
+                self.model.init_sims()
 
             if (self.model_name in config_parser.config[
                 'sw_bert_models']):  # or (self.model_name in config_parser.config['sw_gpt2_models']):
@@ -224,7 +234,7 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                 self.model = Elmo(config_parser.config['sw_supported_models'][self.model_name][0],
                                   config_parser.config['sw_supported_models'][self.model_name][1], 2,
                                   dropout=0)
-                #self.elmo_embedder()
+                # self.elmo_embedder()
                 params_file_dir = os.path.dirname(config_parser.config['sw_supported_models'][self.model_name][0])
 
             if self.model_name in config_parser.config['sw_gpt2_models']:
@@ -277,7 +287,8 @@ class BertModelWrapper(BaseModelWrapper):
         loss = loss_fct(predictions.squeeze(), tensor_input.squeeze()).data
         score = math.exp(loss / len(tokenize_input))
 
-        if (self.params['exp_loss_similarity_for_chain_validation_min'] <= score) and (score <= self.params['exp_loss_similarity_for_chain_validation_max']):
+        if (self.params['exp_loss_similarity_for_chain_validation_min'] <= score) and (
+                score <= self.params['exp_loss_similarity_for_chain_validation_max']):
             return True, score
         else:
             return False, score
@@ -359,6 +370,96 @@ class Word2VecModelWrapper(BaseModelWrapper):
 
         return False, sim
 
+    def calculate_model_sw_vocab_vec(self, vocabulary: list):
+        super(self.__class__, self).check_init_model_state()
+        wvecs = np.array([0] * 300)
+        for word in vocabulary:
+            vec = self.model.word_vec(word, use_norm=True)
+            wvecs = np.vstack((wvecs, vec))
+        return wvecs
+
+    def get_most_similar_from_vocab(self, entities_list, wvecs, positive=None, negative=None, topn=10,
+                                    restrict_vocab=None,
+                                    indexer=None):
+
+        super(self.__class__, self).check_init_model_state()
+
+        if positive is None:
+            positive = []
+        if negative is None:
+            negative = []
+
+        if isinstance(positive, string_types) and not negative:
+            positive = [positive]
+
+        # Добавляем веса к словам
+        positive = [
+            (word, 1.0) if isinstance(word, string_types + (np.ndarray,)) else word
+            for word in positive
+        ]
+        negative = [
+            (word, -1.0) if isinstance(word, string_types + (np.ndarray,)) else word
+            for word in negative
+        ]
+
+        # Считаем взвешенное представление слов
+        all_words, mean = set(), []
+        for word, weight in positive + negative:
+            if isinstance(word, np.ndarray):
+                mean.append(weight * word)
+            else:
+                mean.append(weight * self.model.word_vec(word, use_norm=True))
+                if word in self.model.vocab:
+                    all_words.add(self.model.vocab[word].index)
+        if not mean:
+            raise ValueError("cannot compute similarity with no input")
+        mean = matutils.unitvec(np.array(mean).mean(axis=0)).astype(REAL)
+
+        if indexer is not None and isinstance(topn, int):
+            return indexer.most_similar(mean, topn)
+
+        dists = dot(wvecs, mean)
+        if not topn:
+            return dists
+        best = matutils.argsort(dists, topn=topn + len(all_words), reverse=True)
+        return [entities_list[el - 1] for el in best]
+
+    def improve_chain(self, target: list, exp_chain: list, vocab_list: list, word_vecs, depth=6, type_gen=0):
+        super(self.__class__, self).check_init_model_state()
+        res = []
+        full_chain = []
+        used_candidates = []
+        used_odd_words = []
+        full_chain.append(target)
+        full_chain.append(exp_chain)
+        full_chain = [val for sublist in full_chain for val in sublist]
+        res.append(['RANDOM', -1, -1, full_chain.copy()])
+        #print(f'Исходная цепочка: {full_chain}')
+        for i in range(0, depth):
+            odd_word = self.model.doesnt_match(full_chain)
+            used_odd_words.append(odd_word)
+            full_chain.remove(odd_word)
+
+            if type_gen == 0:
+                negative = []
+            if type_gen == 1:
+                negative = used_candidates
+            if type_gen == 2:
+                negative = used_odd_words
+            if type_gen == 3:
+                negative = used_candidates.append(used_odd_words)
+
+            candidates = self.get_most_similar_from_vocab(wvecs=word_vecs, entities_list=vocab_list,
+                                                          positive=full_chain, negative=negative)
+            for candidate in candidates:
+                if not ((candidate in full_chain) or (candidate == odd_word)):
+                    full_chain.append(candidate)
+                    used_candidates.append(candidate)
+                    break
+            #print(f'Получили новую цепочку: «{full_chain}» (заменили слово «{odd_word}» на слово «{candidate}»).')
+            res.append([self.model_name, i, type_gen, full_chain.copy()])
+        return res
+
 
 class gpt2ModelWrapper(BaseModelWrapper):
     def __init__(self, model):
@@ -385,7 +486,8 @@ class gpt2ModelWrapper(BaseModelWrapper):
         loss = self.model(tensor_input, lm_labels=tensor_input)
         score = math.exp(loss / len(tokenize_input))
 
-        if (self.params['exp_loss_similarity_for_chain_validation_min'] <= score)  and (score <= self.params['exp_loss_similarity_for_chain_validation_max']):
+        if (self.params['exp_loss_similarity_for_chain_validation_min'] <= score) and (
+                score <= self.params['exp_loss_similarity_for_chain_validation_max']):
             return True, score
         else:
             return False, score
@@ -414,7 +516,7 @@ class ELMoModelWrapper(BaseModelWrapper):
         exp_vec = string.split(' ')
         target_title = exp_vec[0]
         exp_titles = exp_vec[1:]
-        #full_vec = [target_title, ['хуй'], exp_titles]
+        # full_vec = [target_title, ['хуй'], exp_titles]
         full_vec = [target_title, exp_titles]
         ids = batch_to_ids(full_vec)
         embeddings = self.model(ids)
@@ -424,7 +526,8 @@ class ELMoModelWrapper(BaseModelWrapper):
         # см. https://github.com/allenai/allennlp/issues/1789
         dist = scipy.spatial.distance.cosine(target_embs, exp_embs)
 
-        if (self.params['vec_similarity_for_chain_validation_min'] <= dist) and (dist <= self.params['vec_similarity_for_chain_validation_max']):
+        if (self.params['vec_similarity_for_chain_validation_min'] <= dist) and (
+                dist <= self.params['vec_similarity_for_chain_validation_max']):
             return True, dist
         else:
             return False, dist
