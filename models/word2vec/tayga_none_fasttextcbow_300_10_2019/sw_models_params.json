@@ -1,8 +1,8 @@
 {
     "synonymy_cosine_threshold": 0.18,
     "relative_cosine_similarity_threshold": 0.094890811,
-    "cosmul_similarity_for_chain_validation_min": 0,
-    "cosmul_similarity_for_chain_validation": 0.91,
+    "cosmul_similarity_for_chain_validation_min": 0.91,
+    "cosmul_similarity_for_chain_validation_max": 4,
 	"synonymy_prediction_threshold": 0.2,
 	"chain_validity_cosine_threshold": 0.7,
 	"chain_validity_prediction_threshold": 0.9

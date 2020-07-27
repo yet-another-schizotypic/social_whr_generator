@@ -43,20 +43,19 @@ def check_explanation_chain_validity_with_permutations(model_name, target, exp_w
 #                                                        model_threshold_name='exp_loss_similarity_for_chain_validation_max',
 #                                                        func=check_explanation_chain_validity_with_permutations)
 
-#run = check_by_random_samples(1000000)
+# run = check_by_random_samples(1000000)
 # run = check_by_combinations()
 
 # run = check_bert_with_permutations(10000)
 
 def produce_append_big_file_for_model_tests(sample_count_per_one_run):
-    #TODO: data_dir — вынести в конфиг
+    # TODO: data_dir — вынести в конфиг
     output_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
     output_dir = os.path.join(output_dir, 'pipeline/')
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
     output_file = os.path.join(output_dir, 'big_quasi_random_chains_file.csv')
-
 
     vocab_file_name = os.path.join(sw_constants.SW_SCRIPT_DATA_PATH, 'united_dict.txt')
 
@@ -81,29 +80,34 @@ def produce_append_big_file_for_model_tests(sample_count_per_one_run):
     print(f'Процесс завершен, коллизий: {total_collisions}')
 
 
-def do_improve_chains(batch_size=1000):
+def do_improve_chains(batch_size=1000, mix_steps=10):
     f_h_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
     input_dir = os.path.join(f_h_dir, 'pipeline')
     input_file = os.path.join(input_dir, 'big_quasi_random_chains_file.csv')
     vocab_file_name = os.path.join(sw_constants.SW_SCRIPT_DATA_PATH, 'united_dict.txt')
-
     vocab_words_list = SWUtils.read_vocab_without_duplicates(vocab_file_name, check_synonymy=False)
+    supported_models = ['word2vec_tayga_bow', 'word2vec_araneum_fasttextskipgram_300',
+                        'word2vec_ruscorpora_none_fasttextskipgram']
 
-    Heuristics.improve_chains(chains_file=input_file, model_name='word2vec_tayga_bow', vocabulary=vocab_words_list, total_improvements=batch_size)
+    Heuristics.improve_chains(chains_file=input_file, supported_models=supported_models,
+                              vocabulary=vocab_words_list, total_improvements=batch_size, mix_steps=mix_steps)
 
-#run = do_improve_chains(batch_size=10000)
 
-#TODO: протестировать буфферы на экселе
+# run = do_improve_chains(batch_size=10000, mix_steps=300)
 
-#run = produce_append_big_file_for_model_tests(10000000)
 
-run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048'], True)
+# run = produce_append_big_file_for_model_tests(10000000)
 
-#run = produce_append_big_file_for_model_tests(1000000)
+run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048', 'm_russian_gpt2-aws'], True, 100000)
 
-#run = Heuristics.do_precomputations_by_file([], True)
+# run = produce_append_big_file_for_model_tests(1000000)
 
-# TODO: другие БЕРТы, ELMo, XLNET
-# TODO: найти табличную альтернативу экселю под MacOS
+# run = Heuristics.do_precomputations_by_file([], True)
+
+# TODO: проверить, что хэши работают корректно, и Reader реально не читает строки, которые уже есть в выходном файле
+# TODO: обернуть генератор улучшайзинга так, чтобы он брал разные WOrd2Vec'и
+# TODO: поменять word object в word2vec, GPT и ELMO - пока в unsupported models
+#
+# TODO: корректно прописать флуш буфера в write__del__
 # TODO: В таймер добавить вывод скорости per 1000, например или per minute
 # TODO: Semantic similarity отсюда в word2vec: https://habr.com/ru/post/275913/

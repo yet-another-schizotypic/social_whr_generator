@@ -32,12 +32,26 @@ def convert_data_from_old_text_tocsv():
             fp.close()
 
 
+def unpack_csv_string(row):
+    res = [[row[0], row[1]]]
+    return res
 def test_csv_buffers():
-    from sw_core import CSVReader
+    from sw_core import CSVReader, CSVWriter
     import sw_constants
     file_name = os.path.join(sw_constants.SW_SCRIPT_PATH, 'excel_csv_test.csv')
-    csv_reader = CSVReader(input_file_name=file_name, total_operations=100)
+    output_file = os.path.join(sw_constants.SW_SCRIPT_PATH, 'excel_csv_test_output.csv')
+    csv_writer = CSVWriter(total_operations=17, header=['digits', 'letters'], output_file_name=output_file)
+    csv_reader = CSVReader(input_file_name=file_name, total_operations=13)
+    unpacker = unpack_csv_string
     for row in csv_reader:
-        print(f'Строка: {row["digits"]} : {row["letters"]}')
+        res = (unpacker, [row['digits'], row['letters']])
+        csv_writer.write_csv(res)
 
-run = test_csv_buffers()
+def test_magnitude():
+    import pymagnitude
+    from pymagnitude import converter
+    input_dir = "/Users/yet-another-schizotypic/Documents/__Develop/Социоблядь/social_whr_generator/models/ELMo/elmo_src"
+    output_dir = "/Users/yet-another-schizotypic/Documents/__Develop/Социоблядь/social_whr_generator/models/ELMo/elmo_magnitude"
+    converter.convert(input_file_path= input_dir, output_file_path=output_dir)
+
+test_magnitude()

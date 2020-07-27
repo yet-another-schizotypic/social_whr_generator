@@ -194,7 +194,7 @@ class Heuristics:
     #             fp.close()
 
     @staticmethod
-    def do_precomputations_by_file(unsupported_models: list, do_equity: bool, next_step_count=100000):
+    def do_precomputations_by_file(unsupported_models: list, do_equity: bool, next_step_count=100000, verbose=False):
         f_h_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
         out_dir = os.path.join(f_h_dir, 'pipeline/improvement/precomputations/')
         if not os.path.exists(out_dir):
@@ -212,7 +212,7 @@ class Heuristics:
                     models_output_files[name] = model_output_file
                     model_file_len = SWUtils.get_file_len(model_output_file)
                     if model_file_len > 1:
-                        models_statuses[name] = model_file_len
+                        models_statuses[name] = model_file_len - 1
                     else:
                         models_statuses[name] = 0
 
@@ -236,16 +236,10 @@ class Heuristics:
 
             sw_logger.info(f'Сейчас нужно, чтобы {model_name} обработала {max_diff} цепочек.')
             model_output_file = models_output_files[model_name]
-            hashes = {}
+
 
             i = 0
-            # # читаем хэши уже проверенных цепочек в словарь, чтобы не повторяться в вычислениях
-            # if os.path.exists(model_output_file):
-            #     for line in open(model_output_file, 'r'):
-            #         _, has_sum, _, _, _, _, _, _, _ = Heuristics.unpack_string_from_prev_results(line)
-            #         hashes[has_sum] = True
 
-            # начинаем читать цепочки из файла
             input_file_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
             input_file_name = os.path.join(input_file_dir, "pipeline/improvement/improved_chains.csv")
 
@@ -263,24 +257,13 @@ class Heuristics:
                 if i >= max_diff:
                     break
 
-                #TODO: работу с хэшами — на уровень ридера, чтобы они повторные туда просто не попадали
-
-                # prev_res_str, hash_sum_str, threshold_min_str, threshold_max_str, \
-                # type_prefix_str, model_name_str, \
-                # metric_res, target, exp_words = Heuristics.unpack_string_from_prev_results(line)
-                #
-                # # Убеждаемся, что такую мы ещё не считали
-                # if hash_sum_str in hashes.keys():
-                #     continue
-
                 i = i + 1
 
-                # TODO: переделать на списки и стинги
                 target = line['target']
                 exp_words = line['exp_words']
                 chain_validity, metric_res = all_sw_models[model_name].check_explanation_chain_validity(target,
                                                                                                         exp_words)
-                if chain_validity is True:
+                if (chain_validity is True) and (verbose is True):
                     sw_logger.info(f'Найден кандидат! Это строка: {target} =?= {exp_words}')
 
                 row = (unpacker, [line['model_name'], line['depth_of_generations'], line['generation_type'],
@@ -313,7 +296,7 @@ class Heuristics:
         for el in exp_words.split(' '):
             full_chain.append(el)
         hash_sum = str(Math.get_hash(str(full_chain)))
-        res = [hash_sum, row[0], row[1], row[2], row[3], row[4], row[5], target, exp_words]
+        res = [[hash_sum, row[0], row[1], row[2], row[3], row[4], row[5], target, exp_words]]
 #        line['model_name'], line['depth_of_generations'], line['generation_type'],
 #        model_name, metric_res, chain_validity, target, exp_words]
 
@@ -323,36 +306,47 @@ class Heuristics:
         return res
 
     @staticmethod
-    def improve_chains(chains_file, model_name: str, vocabulary: list, total_improvements: int):
+    def improve_chains(chains_file, supported_models: list, vocabulary: list, total_improvements: int, mix_steps: int):
+
         f_h_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
         output_dir = os.path.join(f_h_dir, 'pipeline/improvement')
         if not os.path.exists(output_dir):
             os.mkdir(output_dir)
-        output_file = os.path.join(output_dir, ' improved_chains.csv')
+        output_file = os.path.join(output_dir, 'improved_chains.csv')
 
-        voc_vecs = all_sw_models[model_name].calculate_model_sw_vocab_vec(vocabulary)
+        batch_size = total_improvements // mix_steps
+        pb = ProgressBar(total=mix_steps)
+        for step in range(0, mix_steps):
+            sw_logger.info(f'Работает «улучшайзер» цепочек, проход {step} из {mix_steps}')
 
-        csv_reader = CSVReader(total_operations=total_improvements, input_file_name=chains_file)
-        csv_headers = ['hash_sum', 'model_name', 'depth_of_generations', 'generation_type', 'target', 'exp_words']
-        csv_writer = CSVWriter(total_operations=total_improvements, output_file_name=output_file, header=csv_headers)
-        pb = ProgressBar(total=total_improvements)
+            for model_name in all_sw_models.keys():
+                if not (model_name in supported_models):
+                    continue
 
-        unpacker = Heuristics.unpack_ipmproved_chain_result_for_csv_writing
-        total_done = 0
-        for chain in csv_reader:
-            if total_done > total_improvements:
-                break
-            target = [chain['target']]
-            exp_words = chain['exp_words'].replace('[','').replace("'",'').replace(']','').split(', ')
-            improved_chains = []
-            for i in range(0, 4):
-                res = all_sw_models[model_name].improve_chain(target=target, exp_chain=exp_words,
+                sw_logger.info(f'Сейчас модель {model_name} попытается найти улучшенные версии {batch_size} цепочек')
+
+                voc_vecs = all_sw_models[model_name].calculate_model_sw_vocab_vec(vocabulary)
+                csv_reader = CSVReader(total_operations=total_improvements, input_file_name=chains_file, file_to_read_hashes=output_file)
+                csv_headers = ['hash_sum', 'model_name', 'depth_of_generations', 'generation_type', 'target', 'exp_words']
+                csv_writer = CSVWriter(total_operations=total_improvements, output_file_name=output_file, header=csv_headers)
+
+
+                unpacker = Heuristics.unpack_ipmproved_chain_result_for_csv_writing
+                operations_done = 0
+                for chain in csv_reader:
+                    if operations_done > batch_size:
+                        break
+                    target = [chain['target']]
+                    exp_words = chain['exp_words'].replace('[','').replace("'",'').replace(']','').split(', ')
+                    improved_chains = []
+                    for i in range(0, 4):
+                        res = all_sw_models[model_name].improve_chain(target=target, exp_chain=exp_words,
                                                                         vocab_list=vocabulary, word_vecs=voc_vecs,
                                                                         depth=7, type_gen=i)
-                improved_chains.append(res)
+                        improved_chains.append(res)
 
-            row = (unpacker, improved_chains)
-            csv_writer.write_csv(row)
+                    row = (unpacker, improved_chains)
+                    csv_writer.write_csv(row)
+                    operations_done += 1
+                csv_writer.flush()
             pb.print_progress_bar()
-            total_done += 1
-        csv_writer.flush()

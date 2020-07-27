@@ -346,28 +346,28 @@ class Word2VecModelWrapper(BaseModelWrapper):
 
     def check_explanation_chain_validity(self, target: Word, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
-        target_title = target.title
+        exp_string = re.sub(r"[^а-яА-Я]+", ' ', str(exp_chain)).strip(' ')
         positive = []
-        for element in exp_chain:
-            positive.append(element.title)
+        for element in exp_string.split(' '):
+            positive.append(element)
 
         suggestions = self.model.most_similar_cosmul(positive=positive)
-        if target_title in suggestions:
+        if target in suggestions:
             return True, 100
         else:
             for s_word, s_sim in suggestions:
-                sim = self.model.similarity(target_title, s_word)
+                sim = self.model.similarity(target, s_word)
                 # print(target_title, s_word, sim)
-                if sim >= self.params['cosmul_similarity_for_chain_validation']:
+                if (sim <= self.params['cosmul_similarity_for_chain_validation_max']) and (sim >= self.params['cosmul_similarity_for_chain_validation_min']):
                     return True, sim
 
-        res_vector = []
-        for element in exp_chain:
-            embeddings = element.get_word_embeddings(self.model_name)
-            res_vector = Math.sum_vectors(res_vector, embeddings)
-            suggestions = self.model.similar_by_vector(res_vector)
-            if target_title in suggestions:
-                return True, 50
+        # res_vector = []
+        # for element in exp_chain:
+        #     embeddings = element.get_word_embeddings(self.model_name)
+        #     res_vector = Math.sum_vectors(res_vector, embeddings)
+        #     suggestions = self.model.similar_by_vector(res_vector)
+        #     if target in suggestions:
+        #         return True, 50
 
         return False, sim
 

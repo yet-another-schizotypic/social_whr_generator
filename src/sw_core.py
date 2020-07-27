@@ -231,7 +231,7 @@ class CSVReader(CSVBuffer):
             self.__file_descriptor__ = self.__file_object__.fileno()
             self.__perm_file_object__ = fp = open(self.__file_descriptor__, 'r', closefd=False)
             self.__csv_reader__ = csv.DictReader(fp)
-            self.header = next(self.__csv_reader__)
+            #self.header = next(self.__csv_reader__)
 
 
     def __read_csv_file_to_inner_buffer__(self, include_header=False, start_position=0):
@@ -239,6 +239,8 @@ class CSVReader(CSVBuffer):
         i = 0
 
         for line in self.__csv_reader__:
+            if line['hash_sum'] in self.used_hashes.keys():
+                continue
             self.buffer_list.append(line)
             i += 1
             if i >= self.buffer_size:
