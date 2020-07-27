@@ -105,7 +105,7 @@ class SWUtils:
 
     @staticmethod
     def get_file_len(file_name):
-        if not os.path.exists(file_name):
+        if (not os.path.exists(file_name)) or (file_name is None):
             return 0
         with open(file_name) as f:
             for i, l in enumerate(f):
@@ -134,6 +134,18 @@ class SWUtils:
             chains_list.append(words_in_chain)
             pb.print_progress_bar()
         return chains_list
+
+    @staticmethod
+    def file_has_more_than_one_line(file_path):
+        if file_path is None:
+            return False
+        if not (os.path.exists(file_path)):
+            return False
+        i = 0
+        for line in open(file_path, 'r'):
+            i += 1
+            if i > 1:
+                return True
 
     @staticmethod
     def read_vocab_without_duplicates(file_name, check_synonymy: bool):
@@ -197,41 +209,66 @@ class CSVBuffer:
             self.buffer_size = 5
 
         self.buffer_list = []
-        self.file_name = file_name
+        self.file_to_read_hashes_from = file_name
         self.header = header
         self.used_hashes = {}
-        if SWUtils.get_file_len(self.file_name) > 1:
-            with open(self.file_name) as fp:
-                reader = csv.DictReader(fp)
-                for line in reader:
-                    self.used_hashes[line['hash_sum']] = True
-
+        if not (self.file_to_read_hashes_from is None):
+            if SWUtils.file_has_more_than_one_line(self.file_to_read_hashes_from):
+                with open(self.file_to_read_hashes_from) as fp:
+                    reader = csv.DictReader(fp)
+                    for line in reader:
+                        self.used_hashes[line['hash_sum']] = True
 
 
 class CSVReader(CSVBuffer):
-    def __init__(self, total_operations: int, input_file_name: str, check_hashes_file_name: str):
-        pass
+    def __init__(self, total_operations: int, input_file_name: str, file_to_read_hashes=None):
+        super().__init__(total_operations, file_to_read_hashes, None)
+        self.file_to_read = input_file_name
+        self.last_read_position = 0
+        self.__csv_reader__ = None
+        if SWUtils.file_has_more_than_one_line(input_file_name):
+            self.__file_object__ = open(self.file_to_read, 'r')
+            self.__file_descriptor__ = self.__file_object__.fileno()
+            self.__perm_file_object__ = fp = open(self.__file_descriptor__, 'r', closefd=False)
+            self.__csv_reader__ = csv.DictReader(fp)
+            self.header = next(self.__csv_reader__)
 
-    def __read_csv_file_to_inner_buffer__(self, include_header=False):
+
+    def __read_csv_file_to_inner_buffer__(self, include_header=False, start_position=0):
         self.buffer_list = []
-        with open(self.file_name) as fp:
-            reader = csv.reader(fp)
-            header = next(reader)
-            if include_header is True:
-                self.buffer_list.append(header)
-            i = 0
-            for line in reader:
-                self.buffer_list.append(line)
-                i += 1
-                if i > self.buffer_size:
-                    break
+        i = 0
 
-    def read_line_from_csv_fle(self):
+        for line in self.__csv_reader__:
+            self.buffer_list.append(line)
+            i += 1
+            if i >= self.buffer_size:
+                break
+
+    # def read_line_from_csv_file(self):
+    #     if len(self.buffer_list) == 0:
+    #         self.__read_csv_file_to_inner_buffer__()
+    #
+    #     while True:
+    #         for element in self.buffer_list:
+    #             yield element
+    #         self.buffer_list = []
+    #         self.__read_csv_file_to_inner_buffer__()
+    #         #TODO: Если буффер пустой, выходим
+    #         #TODO: протестировать буфферы на Экселе на предмет не теряют ли они данные
+    #         #Это всё вообще имеет смысл, если получится найти в Питоне fseek
+
+    def __iter__(self):
         if len(self.buffer_list) == 0:
             self.__read_csv_file_to_inner_buffer__()
-        for element in self.buffer_list:
-            yield element
-        self.buffer_list = []
+
+        while True:
+            for element in self.buffer_list:
+                yield element
+            self.buffer_list = []
+            self.__read_csv_file_to_inner_buffer__()
+
+    def __del__(self):
+        self.__perm_file_object__.close()
 
 
 class CSVWriter(CSVBuffer):
@@ -240,14 +277,14 @@ class CSVWriter(CSVBuffer):
 
     def flush(self):
         self.write_csv_header(print_warning=False)
-        print(f'Сбрасываю буффер из {len(self.buffer_list)} записей в файл {self.file_name}')
-        with open(self.file_name, 'a') as fp:
+        # print(f'Сбрасываю буффер из {len(self.buffer_list)} записей в файл {self.file_to_read_hashes_from}')
+        with open(self.file_to_read_hashes_from, 'a') as fp:
             writer = csv.writer(fp, quoting=csv.QUOTE_NONNUMERIC)
             for element in self.buffer_list:
                 writer.writerow(element)
         fp.close()
         self.buffer_list = []
-        print('Запись завершена, буффер чист.')
+
 
     def write_csv(self, row):
         assert row[0], typing.Callable
@@ -262,14 +299,18 @@ class CSVWriter(CSVBuffer):
             self.flush()
 
     def write_csv_header(self, print_warning=False):
-        if os.path.exists(self.file_name):
+        if os.path.exists(self.file_to_read_hashes_from):
             if print_warning is True:
-                print(f'Попытка перезаписать существующий csv-файл {self.file_name}')
+                print(f'Попытка перезаписать существующий csv-файл {self.file_to_read_hashes_from}')
             return None
-        with open(self.file_name, 'w') as fp:
+        with open(self.file_to_read_hashes_from, 'w') as fp:
             writer = csv.writer(fp, quoting=csv.QUOTE_NONNUMERIC)
             writer.writerow(self.header)
         fp.close()
+
+    def __del__(self):
+        self.flush()
+        print('Остатки буфера записаны в файл')
 
 # Набор всяких околоматематических штук
 class Math:
@@ -440,8 +481,6 @@ class StopTimer:
 
         self.__operations_done__ = self.__operations_done__ + 1
 
-
-
 # TODO почитать про model.eval() и, возможно, заморозить модели или сделать выборку, по которой они будут подбирать константы
 # TODO реализовать проверку валидности цепочек в моделях и кворуме
 
@@ -449,4 +488,3 @@ class StopTimer:
 # TODO: в граф — словарь, чтобы по многу раз не считать векторы
 # TODO: сохранение графа — super.save + словарь отдельно, не через pickle, чтобы можно было переписывать код класса
 # TODO: каждой вершине — простые атрибуты: сколько раз бралась эвристиками в рассмотрение, сколько раз объясняется, в скольки объяснениях участвует
-

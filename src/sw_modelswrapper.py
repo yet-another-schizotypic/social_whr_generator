@@ -275,10 +275,11 @@ class BertModelWrapper(BaseModelWrapper):
     def check_synonymy(self, w1: Word, w2: Word):
         pass
 
-    def check_explanation_chain_validity(self, target: Word, exp_chain: list):
+    def check_explanation_chain_validity(self, target: str, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
-        string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', str(string))
+        string = target + str(exp_chain)
+        string = re.sub(r"[^а-яА-Я]+", ' ', string)
+
         tokenize_input = self.tokenizer.tokenize(string)
         tensor_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokenize_input)])
         predictions = self.model(tensor_input)
@@ -435,6 +436,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
         full_chain = [val for sublist in full_chain for val in sublist]
         res.append(['RANDOM', -1, -1, full_chain.copy()])
         #print(f'Исходная цепочка: {full_chain}')
+        negative = []
         for i in range(0, depth):
             odd_word = self.model.doesnt_match(full_chain)
             used_odd_words.append(odd_word)
@@ -447,7 +449,12 @@ class Word2VecModelWrapper(BaseModelWrapper):
             if type_gen == 2:
                 negative = used_odd_words
             if type_gen == 3:
-                negative = used_candidates.append(used_odd_words)
+                for el in used_odd_words:
+                    if not (el in negative):
+                        negative.append(el)
+                for el in used_candidates:
+                    if not (el in negative):
+                        negative.append(el)
 
             candidates = self.get_most_similar_from_vocab(wvecs=word_vecs, entities_list=vocab_list,
                                                           positive=full_chain, negative=negative)

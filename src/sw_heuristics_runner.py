@@ -89,13 +89,15 @@ def do_improve_chains(batch_size=1000):
 
     vocab_words_list = SWUtils.read_vocab_without_duplicates(vocab_file_name, check_synonymy=False)
 
-    Heuristics.improve_chains(input_file, vocab_words_list)
+    Heuristics.improve_chains(chains_file=input_file, model_name='word2vec_tayga_bow', vocabulary=vocab_words_list, total_improvements=batch_size)
 
-run = do_improve_chains(batch_size=10)
+#run = do_improve_chains(batch_size=10000)
+
+#TODO: протестировать буфферы на экселе
 
 #run = produce_append_big_file_for_model_tests(10000000)
 
-#run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048'], True)
+run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048'], True)
 
 #run = produce_append_big_file_for_model_tests(1000000)
 

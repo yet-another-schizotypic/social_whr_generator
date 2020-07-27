@@ -32,3 +32,12 @@ def convert_data_from_old_text_tocsv():
             fp.close()
 
 
+def test_csv_buffers():
+    from sw_core import CSVReader
+    import sw_constants
+    file_name = os.path.join(sw_constants.SW_SCRIPT_PATH, 'excel_csv_test.csv')
+    csv_reader = CSVReader(input_file_name=file_name, total_operations=100)
+    for row in csv_reader:
+        print(f'Строка: {row["digits"]} : {row["letters"]}')
+
+run = test_csv_buffers()
