@@ -47,11 +47,51 @@ def test_csv_buffers():
         res = (unpacker, [row['digits'], row['letters']])
         csv_writer.write_csv(res)
 
-def test_magnitude():
-    import pymagnitude
-    from pymagnitude import converter
-    input_dir = "/Users/yet-another-schizotypic/Documents/__Develop/Социоблядь/social_whr_generator/models/ELMo/elmo_src"
-    output_dir = "/Users/yet-another-schizotypic/Documents/__Develop/Социоблядь/social_whr_generator/models/ELMo/elmo_magnitude"
-    converter.convert(input_file_path= input_dir, output_file_path=output_dir)
+# def test_magnitude():
+#     import pymagnitude
+#     from pymagnitude import converter
+#     input_dir = "/Users/yet-another-schizotypic/Documents/__Develop/Социоблядь/social_whr_generator/models/ELMo/elmo_src"
+#     output_dir = "/Users/yet-another-schizotypic/Documents/__Develop/Социоблядь/social_whr_generator/models/ELMo/elmo_magnitude"
+#     converter.convert(input_file_path= input_dir, output_file_path=output_dir)
+#
+# test_magnitude()
 
-test_magnitude()
+def get_most_similar_cosmul_from_vocab(model_name):
+    from sw_modelswrapper import all_sw_models
+    from sw_core import config_parser
+    import sw_constants
+    from gensim.models.keyedvectors import Vocab
+
+    f_h_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
+    input_dir = os.path.join(f_h_dir, 'pipeline')
+
+    vocab_file_name = os.path.join(sw_constants.SW_SCRIPT_DATA_PATH, 'united_dict.txt')
+    vocabulary = SWUtils.read_vocab_without_duplicates(vocab_file_name, check_synonymy=False)
+    all_sw_models[model_name].check_init_model_state()
+    voc_vecs = all_sw_models[model_name].calculate_model_sw_vocab_vec(vocabulary)
+
+    voc_dict = {}
+    i = 0
+    for element in vocabulary:
+        v = Vocab(index=i)
+        voc_dict[element] = v
+        i += 1
+
+
+    #Дальше — просто тест на человечекских цепочках
+    input_file = os.path.join(sw_constants.SW_SCRIPT_PATH, 'mixed_chains_by_humans.txt')
+    for line in open(input_file, 'r'):
+        human_target = line.lower().split('=')[0]
+        exp_words = line.lower().replace('+',' ').split('=')[1].strip('\n').split(' ')
+        positive = exp_words
+        machine_suggestions_cosmul = all_sw_models[model_name].get_most_similar_cosmul_from_vocab(entities_list=vocabulary,
+                                                                           vocab_dict=voc_dict,
+                                                                           wvecs=voc_vecs, positive=positive)
+        machine_suggestions = all_sw_models[model_name].get_most_similar_from_vocab(entities_list=vocabulary,
+                                                                                    wvecs=voc_vecs, positive=positive)
+
+        print(f'Цепочка: «{line.lower().split("=")[1:]}». Ответ человека: «{human_target}». Догадки машины: «{machine_suggestions_cosmul}»')
+
+
+
+run = get_most_similar_cosmul_from_vocab('word2vec_tayga_bow')

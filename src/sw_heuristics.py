@@ -349,4 +349,78 @@ class Heuristics:
                     csv_writer.write_csv(row)
                     operations_done += 1
                 csv_writer.flush()
+            pb.print_progress_bar ()
+
+
+
+
+
+
+    @staticmethod
+    def improve_chains_with_cosmul(chains_file, supported_models: list, vocabulary: list, total_improvements: int, mix_steps: int):
+
+        f_h_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
+        output_dir = os.path.join(f_h_dir, 'pipeline/improvement')
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
+        output_file = os.path.join(output_dir, 'improved_chains_with_cosmul.csv')
+
+        batch_size = total_improvements // mix_steps
+        pb = ProgressBar(total=mix_steps)
+        for step in range(0, mix_steps):
+            sw_logger.info(f'Работает «улучшайзер» цепочек, проход {step} из {mix_steps}')
+
+            for model_name in all_sw_models.keys():
+                if not (model_name in supported_models):
+                    continue
+
+                sw_logger.info(f'Сейчас модель {model_name} попытается найти улучшенные версии {batch_size} цепочек')
+
+                voc_vecs = all_sw_models[model_name].calculate_model_sw_vocab_vec(vocabulary)
+                voc_dict = all_sw_models[model_name].calculate_model_sw_vocab_dict(vocabulary)
+                csv_reader = CSVReader(total_operations=total_improvements, input_file_name=chains_file, file_to_read_hashes=output_file)
+                csv_headers = ['hash_sum', 'model_name', 'depth_of_generations', 'generation_type', 'target', 'exp_words']
+                csv_writer = CSVWriter(total_operations=total_improvements, output_file_name=output_file, header=csv_headers)
+
+
+                unpacker = Heuristics.unpack_ipmproved_chain_result_for_csv_writing
+                operations_done = 0
+                for chain in csv_reader:
+                    if operations_done > batch_size:
+                        break
+                    target = [chain['target']]
+                    exp_words = chain['exp_words'].replace('[','').replace("'",'').replace(']','').split(', ')
+                    improved_chains = []
+                    for i in range(0, 4):
+                        res = all_sw_models[model_name].improve_chain(target=target, exp_chain=exp_words,
+                                                                        vocab_list=vocabulary, word_vecs=voc_vecs,
+                                                                        depth=7, type_gen=i)
+
+                        suggestions = __get_cosmul_suggestion_for_improved_chains__(res, model_name, vocabulary, voc_dict, voc_vecs)
+                        improved_chains.append(res)
+                        improved_chains.append(suggestions)
+
+                    row = (unpacker, improved_chains)
+                    csv_writer.write_csv(row)
+                    operations_done += 1
+                csv_writer.flush()
             pb.print_progress_bar()
+
+
+def __get_cosmul_suggestion_for_improved_chains__(improved_res: list, model_name, vocabulary, voc_dict, voc_vecs):
+        res = []
+        for element in improved_res:
+            exp_chain = element[3][1:]
+            positive = exp_chain
+            suggestions = all_sw_models[model_name].get_most_similar_cosmul_from_vocab(entities_list=vocabulary,
+                                                                         vocab_dict=voc_dict,
+                                                                         wvecs=voc_vecs, positive=positive)
+            for suggestion in suggestions:
+                full_chain = []
+                full_chain.append(suggestion)
+                for exp_word in exp_chain:
+                    full_chain.append(exp_word)
+
+                res.append([model_name, -2, "cosmul_suggestion", full_chain.copy()])
+
+        return res

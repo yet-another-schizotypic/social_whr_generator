@@ -92,17 +92,30 @@ def do_improve_chains(batch_size=1000, mix_steps=10):
     Heuristics.improve_chains(chains_file=input_file, supported_models=supported_models,
                               vocabulary=vocab_words_list, total_improvements=batch_size, mix_steps=mix_steps)
 
+def do_improve_chains_with_cosmul(batch_size=1000, mix_steps=10):
+    f_h_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
+    input_dir = os.path.join(f_h_dir, 'pipeline')
+    input_file = os.path.join(input_dir, 'big_quasi_random_chains_file.csv')
+    vocab_file_name = os.path.join(sw_constants.SW_SCRIPT_DATA_PATH, 'united_dict.txt')
+    vocab_words_list = SWUtils.read_vocab_without_duplicates(vocab_file_name, check_synonymy=False)
+    supported_models = ['word2vec_tayga_bow', 'word2vec_araneum_fasttextskipgram_300',
+                        'word2vec_ruscorpora_none_fasttextskipgram']
+
+    Heuristics.improve_chains_with_cosmul(chains_file=input_file, supported_models=supported_models,
+                              vocabulary=vocab_words_list, total_improvements=batch_size, mix_steps=mix_steps)
 
 # run = do_improve_chains(batch_size=10000, mix_steps=300)
 
 
 # run = produce_append_big_file_for_model_tests(10000000)
 
-run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048', 'm_russian_gpt2-aws'], True, 100000)
+#run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048', 'm_russian_gpt2-aws'], True, 100000)
 
 # run = produce_append_big_file_for_model_tests(1000000)
 
-# run = Heuristics.do_precomputations_by_file([], True)
+run = Heuristics.do_precomputations_by_file([], True)
+
+#run = do_improve_chains_with_cosmul(batch_size=10000, mix_steps=300)
 
 # TODO: проверить, что хэши работают корректно, и Reader реально не читает строки, которые уже есть в выходном файле
 # TODO: обернуть генератор улучшайзинга так, чтобы он брал разные WOrd2Vec'и

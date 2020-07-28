@@ -1,12 +1,13 @@
 import math
 from random import randint
 import re
-
+from numbers import Integral
 from future.utils import string_types
 from gensim import matutils
 from gensim.models.word2vec_inner import REAL
+from gensim.models.keyedvectors import Vocab
 
-from numpy import dot
+from numpy import dot, prod
 
 from gensim import utils, matutils
 
@@ -379,9 +380,66 @@ class Word2VecModelWrapper(BaseModelWrapper):
             wvecs = np.vstack((wvecs, vec))
         return wvecs
 
-    def get_most_similar_from_vocab(self, entities_list, wvecs, positive=None, negative=None, topn=10,
-                                    restrict_vocab=None,
-                                    indexer=None):
+    def calculate_model_sw_vocab_dict(self, vocabulary: list):
+        super(self.__class__, self).check_init_model_state()
+        voc_dict = {}
+        i = 0
+        for element in vocabulary:
+            v = Vocab(index=i)
+            voc_dict[element] = v
+            i += 1
+        return voc_dict
+
+    def get_most_similar_cosmul_from_vocab(self,entities_list, vocab_dict, wvecs, positive=None, negative=None, topn=10):
+        super(self.__class__, self).check_init_model_state()
+
+        if isinstance(topn, Integral) and topn < 1:
+            return []
+
+        if positive is None:
+            positive = []
+        if negative is None:
+            negative = []
+
+        self.model.init_sims()
+
+        if isinstance(positive, string_types) and not negative:
+            # allow calls like most_similar_cosmul('dog'), as a shorthand for most_similar_cosmul(['dog'])
+            positive = [positive]
+
+        all_words = {
+             vocab_dict[word].index for word in positive + negative
+             if not isinstance(word, np.ndarray) and word in vocab_dict
+        }
+
+        positive = [
+            self.model.word_vec(word, use_norm=True) if isinstance(word, string_types) else word
+            for word in positive
+        ]
+        negative = [
+            self.model.word_vec(word, use_norm=True) if isinstance(word, string_types) else word
+            for word in negative
+        ]
+
+        if not positive:
+            raise ValueError("cannot compute similarity with no input")
+
+        # equation (4) of Levy & Goldberg "Linguistic Regularities...",
+        # with distances shifted to [0,1] per footnote (7)
+        pos_dists = [((1 + dot(wvecs, term)) / 2) for term in positive]
+        neg_dists = [((1 + dot(wvecs, term)) / 2) for term in negative]
+        dists = prod(pos_dists, axis=0) / (prod(neg_dists, axis=0) + 0.000001)
+
+        if not topn:
+            return dists
+        best = matutils.argsort(dists, topn=topn + len(all_words), reverse=True)
+        # ignore (don't return) words from the input
+        result = [entities_list[el - 1] for el in best if (el -1) not in all_words]
+
+        #result = [(self.index2word[sim], float(dists[sim])) for sim in best if sim not in all_words]
+        return result[:topn]
+
+    def get_most_similar_from_vocab(self, entities_list, wvecs, positive=None, negative=None, topn=10, indexer=None):
 
         super(self.__class__, self).check_init_model_state()
 
@@ -486,6 +544,12 @@ class gpt2ModelWrapper(BaseModelWrapper):
 
     def check_explanation_chain_validity(self, target: Word, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
+
+        #Что-то такое сюда
+        string = target + str(exp_chain)
+        string = re.sub(r"[^а-яА-Я]+", ' ', string)
+
+
         string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
         string = re.sub(r"[^а-яА-Я]+", ' ', str(string)).strip()
         tokenize_input = self.tokenizer.tokenize(string)
@@ -518,12 +582,17 @@ class ELMoModelWrapper(BaseModelWrapper):
 
     def check_explanation_chain_validity(self, target: Word, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
+
+        # Что-то такое сюда
+        string = target + str(exp_chain)
+        string = re.sub(r"[^а-яА-Я]+", ' ', string)
+
         string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
         string = re.sub(r"[^а-яА-Я]+", ' ', str(string)).strip()
         exp_vec = string.split(' ')
         target_title = exp_vec[0]
         exp_titles = exp_vec[1:]
-        # full_vec = [target_title, ['хуй'], exp_titles]
+
         full_vec = [target_title, exp_titles]
         ids = batch_to_ids(full_vec)
         embeddings = self.model(ids)
