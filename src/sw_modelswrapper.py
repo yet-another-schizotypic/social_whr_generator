@@ -279,7 +279,7 @@ class BertModelWrapper(BaseModelWrapper):
     def check_explanation_chain_validity(self, target: str, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
         string = target + str(exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', string)
+        string = re.sub(r"[^а-яА-Я]+", ' ', string).strip(' ')
 
         tokenize_input = self.tokenizer.tokenize(string)
         tensor_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokenize_input)])
@@ -294,17 +294,6 @@ class BertModelWrapper(BaseModelWrapper):
             return True, score
         else:
             return False, score
-
-    def check_explanation_chain_validity_with_permutations(self, target: Word, exp_chain: list):
-        perms = itertools.permutations(exp_chain, len(exp_chain))
-        i = 0
-        for perm in perms:
-            i = i + 1
-            res = self.check_explanation_chain_validity(target, perm)
-            if res is True:
-                return True, score
-
-        return False, score
 
 
 class Word2VecModelWrapper(BaseModelWrapper):
@@ -348,19 +337,27 @@ class Word2VecModelWrapper(BaseModelWrapper):
     def check_explanation_chain_validity(self, target: Word, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
         exp_string = re.sub(r"[^а-яА-Я]+", ' ', str(exp_chain)).strip(' ')
-        positive = []
-        for element in exp_string.split(' '):
-            positive.append(element)
 
-        suggestions = self.model.most_similar_cosmul(positive=positive)
-        if target in suggestions:
-            return True, 100
-        else:
-            for s_word, s_sim in suggestions:
-                sim = self.model.similarity(target, s_word)
-                # print(target_title, s_word, sim)
-                if (sim <= self.params['cosmul_similarity_for_chain_validation_max']) and (sim >= self.params['cosmul_similarity_for_chain_validation_min']):
-                    return True, sim
+        target = exp_string.split(' ')[0]
+        exp_words = exp_string.split(' ')[1:]
+        n_sim = self.model.n_similarity(target, exp_words)
+        if (n_sim <= self.params['cosmul_similarity_for_chain_validation_max']) and (
+                n_sim >= self.params['cosmul_similarity_for_chain_validation_min']):
+            return True, n_sim
+
+        # positive = []
+        # for element in exp_string.split(' '):
+        #     positive.append(element)
+
+        # suggestions = self.model.most_similar_cosmul(positive=positive)
+        # if target in suggestions:
+        #     return True, 100
+        # else:
+        #     for s_word, s_sim in suggestions:
+        #         sim = self.model.similarity(target, s_word)
+        #         # print(target_title, s_word, sim)
+        #         if (sim <= self.params['cosmul_similarity_for_chain_validation_max']) and (sim >= self.params['cosmul_similarity_for_chain_validation_min']):
+        #             return True, sim
 
         # res_vector = []
         # for element in exp_chain:
@@ -370,7 +367,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
         #     if target in suggestions:
         #         return True, 50
 
-        return False, sim
+        return False, n_sim
 
     def calculate_model_sw_vocab_vec(self, vocabulary: list):
         super(self.__class__, self).check_init_model_state()
@@ -547,11 +544,7 @@ class gpt2ModelWrapper(BaseModelWrapper):
 
         #Что-то такое сюда
         string = target + str(exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', string)
-
-
-        string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', str(string)).strip()
+        string = re.sub(r"[^а-яА-Я]+", ' ', string).strip(' ')
         tokenize_input = self.tokenizer.tokenize(string)
         tensor_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokenize_input)])
         loss = self.model(tensor_input, lm_labels=tensor_input)
@@ -585,19 +578,15 @@ class ELMoModelWrapper(BaseModelWrapper):
 
         # Что-то такое сюда
         string = target + str(exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', string)
-
-        string = nl_wrapper.unpack_word_objects_target_exp(target, exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', str(string)).strip()
-        exp_vec = string.split(' ')
-        target_title = exp_vec[0]
-        exp_titles = exp_vec[1:]
+        string = re.sub(r"[^а-яА-Я]+", ' ', string).strip(' ').split(' ')
+        target_title = string[0]
+        exp_titles = string[1:]
 
         full_vec = [target_title, exp_titles]
         ids = batch_to_ids(full_vec)
         embeddings = self.model(ids)
-        target_embs = embeddings['elmo_representations'][1][0][0].detach().numpy().reshape(1, -1).tolist()
-        exp_embs = embeddings['elmo_representations'][1][1][0].detach().numpy().reshape(1, -1).tolist()
+        target_embs = embeddings['elmo_representations'][0][0][0].detach().numpy().reshape(1, -1).tolist()
+        exp_embs = embeddings['elmo_representations'][0][1][0].detach().numpy().reshape(1, -1).tolist()
         # TODO: если будет плохо себя вести, взять с другого слоя ['elmo_representations'][0],
         # см. https://github.com/allenai/allennlp/issues/1789
         dist = scipy.spatial.distance.cosine(target_embs, exp_embs)
