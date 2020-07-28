@@ -227,10 +227,15 @@ class Heuristics:
                 if (max_precomputations[1] == 0) or do_equity is False:
                     max_diff = next_step_count
                     sw_logger.info(f'Работать, негры! Сейчас {model_name} будет делать ещё {max_diff} цепочек!')
-                elif do_equity is True:
+                elif (do_equity is True) and (max_precomputations[1] == next_step_count):
                     sw_logger.info(
                         f'Свобода, равенство, браство! Все модели обработали {max_precomputations[1]} цепочек.')
                     break
+                else:
+                    max_diff = next_step_count - max_precomputations[1]
+                    sw_logger.info(
+                        f'Все модели обработали {max_precomputations[1]} цепочек, но надо набрать {next_step_count}, поэтому теперь будут добирать ещё {max_diff} штук.')
+
 
             pb = ProgressBar(total=max_diff)
 
@@ -270,6 +275,7 @@ class Heuristics:
                                   model_name, metric_res, chain_validity, target, exp_words])
                 csv_writer.write_csv(row)
                 pb.print_progress_bar()
+            csv_writer.flush()
 
     @staticmethod
     def unpack_ipmproved_chain_result_for_csv_writing(row):
