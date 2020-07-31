@@ -118,10 +118,9 @@ run = Heuristics.do_precomputations_by_file(unsupported_models=[], do_equity=Tru
 #run = do_improve_chains_with_cosmul(batch_size=10000, mix_steps=300)
 
 # TODO: проверить, что хэши работают корректно, и Reader реально не читает строки, которые уже есть в выходном файле
-# TODO: поменять word object в word2vec, GPT и ELMO - пока в unsupported models
 # TODO: left join на Pandas для объединения предобсчитанных файлов
 # TODO: корректно прописать флуш буфера в write__del__
-# TODO: В таймер добавить вывод скорости per 1000, например или per minute
 # TODO: Semantic similarity отсюда в word2vec: https://habr.com/ru/post/275913/
 # TODO: переименовать параметр проверки валидности цепочек в соответствие с кодом (не cosmul, а n_sim) в файлах параметров word2vec
-# TODO: left jpoin на Pandas и Dataframes for precomputing results
+# TODO: left join на Pandas и Dataframes for precomputing results
+# TODO: shuffle list и неповторяющиеся кортежи по порядку в качестве содержимого исходного файла для улучшайзеров

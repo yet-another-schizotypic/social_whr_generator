@@ -220,7 +220,7 @@ class Heuristics:
             min_precomputations = min(models_statuses.items(), key=operator.itemgetter(1))
             print(f'Наибольшее количество цепочек ({max_precomputations[1]}) обработала {max_precomputations[0]}')
             print(f'Меньше всех цепочек ({min_precomputations[1]}) обработала {min_precomputations[0]}')
-            max_diff = max_precomputations[1] - min_precomputations[1]
+            max_diff = abs(max_precomputations[1] - min_precomputations[1])
 
             model_name = min_precomputations[0]
             if max_diff == 0:

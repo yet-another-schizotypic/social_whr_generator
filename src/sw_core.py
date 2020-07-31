@@ -190,7 +190,7 @@ class SWUtils:
 
 # Буффер CSV
 class CSVBuffer:
-    def __init__(self, total_operations: int, file_name: str, header: list):
+    def __init__(self, total_operations: int, file_name: str, header: list, do_hash_check=True):
         if total_operations is None:
             self.buffer_size = 1000
         if total_operations >= 1000000:
@@ -211,13 +211,14 @@ class CSVBuffer:
         self.buffer_list = []
         self.file_to_read_hashes_from = file_name
         self.header = header
-        self.used_hashes = {}
-        if not (self.file_to_read_hashes_from is None):
-            if SWUtils.file_has_more_than_one_line(self.file_to_read_hashes_from):
-                with open(self.file_to_read_hashes_from) as fp:
-                    reader = csv.DictReader(fp)
-                    for line in reader:
-                        self.used_hashes[line['hash_sum']] = True
+        if do_hash_check is True:
+            self.used_hashes = {}
+            if not (self.file_to_read_hashes_from is None):
+                if SWUtils.file_has_more_than_one_line(self.file_to_read_hashes_from):
+                    with open(self.file_to_read_hashes_from) as fp:
+                        reader = csv.DictReader(fp)
+                        for line in reader:
+                            self.used_hashes[line['hash_sum']] = True
 
 
 class CSVReader(CSVBuffer):
@@ -274,8 +275,8 @@ class CSVReader(CSVBuffer):
 
 
 class CSVWriter(CSVBuffer):
-    def __init__(self, total_operations: int, output_file_name: str, header: list):
-        super().__init__(total_operations, output_file_name, header)
+    def __init__(self, total_operations: int, output_file_name: str, header: list, do_hash_check = True):
+        super().__init__(total_operations, output_file_name, header, do_hash_check)
 
     def flush(self):
         self.write_csv_header(print_warning=False)

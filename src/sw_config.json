@@ -1,4 +1,8 @@
 {
+	"sw_pymagnitude_models":{
+		"pymagnitude_tayga_lemmas_ELMo": "./models/pymagnitude/pymagnitude_tayga_lemmas_ELMo/model.magnitude"
+		},
+    
     "sw_bert_models": {
         "bert_base_multilingual_cased": "./models/BERT/bert_base_multilingual_cased/",
         "bert_base_multilingual_uncased": "./models/BERT/bert_base_multilingual_uncased/",

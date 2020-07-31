@@ -8,6 +8,7 @@ from gensim.models.word2vec_inner import REAL
 from gensim.models.keyedvectors import Vocab
 
 from numpy import dot, prod
+from pymagnitude import *
 
 from gensim import utils, matutils
 
@@ -230,6 +231,11 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                     BertForMaskedLM.from_pretrained(config_parser.config['sw_supported_models'][self.model_name])
                 params_file_dir = config_parser.config['sw_supported_models'][self.model_name]
                 self.model.eval()
+
+            if self.model_name in config_parser.config['sw_pymagnitude_models']:
+                self.model = Magnitude(config_parser.config['sw_supported_models'][self.model_name])
+                # self.elmo_embedder()
+                params_file_dir = os.path.dirname(config_parser.config['sw_supported_models'][self.model_name])
 
             if self.model_name in config_parser.config['sw_elmo_models']:
                 self.model = Elmo(config_parser.config['sw_supported_models'][self.model_name][0],
@@ -597,6 +603,36 @@ class ELMoModelWrapper(BaseModelWrapper):
         else:
             return False, dist
 
+class PymagnitudeModelWrapper(BaseModelWrapper):
+    def __init__(self, model):
+        super(self.__class__, self).__init__(model)
+
+    def get_embeddings(self, word):
+        super(self.__class__, self).check_init_model_state()
+
+
+    def check_init_model_state(self):
+        super(self.__class__, self).check_init_model_state()
+
+    def check_synonymy(self, w1: Word, w2: Word):
+        pass
+
+    def check_explanation_chain_validity(self, target: Word, exp_chain: list):
+        super(self.__class__, self).check_init_model_state()
+
+        # Что-то такое сюда
+        string = target + str(exp_chain)
+        string = re.sub(r"[^а-яА-Я]+", ' ', string).strip(' ').split(' ')
+        target_title = string[0]
+        exp_titles = string[1:]
+        dist = self.model.distance(exp_titles, target_title)
+
+        if (self.params['vec_similarity_for_chain_validation_min'] <= dist) and (
+                dist <= self.params['vec_similarity_for_chain_validation_max']):
+            return True, dist
+        else:
+            return False, dist
+
 
 all_sw_models = {}
 for key, value in config_parser.config['sw_supported_models'].items():
@@ -608,6 +644,8 @@ for key, value in config_parser.config['sw_supported_models'].items():
         all_sw_models[key] = Word2VecModelWrapper(key)
     if 'gpt2' in key:
         all_sw_models[key] = gpt2ModelWrapper(key)
+    if 'pymagnitude' in key:
+        all_sw_models[key] = PymagnitudeModelWrapper(key)
 
 
 class Quorum:
