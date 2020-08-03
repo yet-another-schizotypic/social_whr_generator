@@ -24,7 +24,7 @@ import numpy as np
 from allennlp.modules.elmo import Elmo, batch_to_ids
 import json, os
 import scipy
-from Levenshtein import distance as levenshtein_distance
+#from Levenshtein import distance as levenshtein_distance
 from sw_core import Math
 
 
@@ -285,7 +285,8 @@ class BertModelWrapper(BaseModelWrapper):
     def check_explanation_chain_validity(self, target: str, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
         string = target + str(exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', string).strip(' ')
+        string = re.sub(r"[^а-яА-ЯЁ-ё]+", ' ', string).strip(' ')
+
 
         tokenize_input = self.tokenizer.tokenize(string)
         tensor_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokenize_input)])
@@ -342,7 +343,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
 
     def check_explanation_chain_validity(self, target: Word, exp_chain: list):
         super(self.__class__, self).check_init_model_state()
-        exp_string = re.sub(r"[^а-яА-Я]+", ' ', str(exp_chain)).strip(' ')
+        exp_string = re.sub(r"[^а-яА-ЯЁ-ё]+", ' ', str(exp_chain)).strip(' ')
 
         target = exp_string.split(' ')[0]
         exp_words = exp_string.split(' ')[1:]
@@ -550,7 +551,7 @@ class gpt2ModelWrapper(BaseModelWrapper):
 
         #Что-то такое сюда
         string = target + str(exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', string).strip(' ')
+        string = re.sub(r"[^а-яА-ЯЁ-ё]+", ' ', string).strip(' ')
         tokenize_input = self.tokenizer.tokenize(string)
         tensor_input = torch.tensor([self.tokenizer.convert_tokens_to_ids(tokenize_input)])
         loss = self.model(tensor_input, lm_labels=tensor_input)
@@ -584,7 +585,7 @@ class ELMoModelWrapper(BaseModelWrapper):
 
         # Что-то такое сюда
         string = target + str(exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', string).strip(' ').split(' ')
+        string = re.sub(r"[^а-яА-ЯЁ-ё]+", ' ', string).strip(' ').split(' ')
         target_title = string[0]
         exp_titles = string[1:]
 
@@ -622,7 +623,7 @@ class PymagnitudeModelWrapper(BaseModelWrapper):
 
         # Что-то такое сюда
         string = target + str(exp_chain)
-        string = re.sub(r"[^а-яА-Я]+", ' ', string).strip(' ').split(' ')
+        string = re.sub(r"[^а-яА-ЯЁ-ё]+", ' ', string).strip(' ').split(' ')
         target_title = string[0]
         exp_titles = string[1:]
         dist = self.model.distance(exp_titles, target_title)

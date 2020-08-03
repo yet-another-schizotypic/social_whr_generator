@@ -92,6 +92,7 @@ def do_improve_chains(batch_size=1000, mix_steps=10):
     Heuristics.improve_chains(chains_file=input_file, supported_models=supported_models,
                               vocabulary=vocab_words_list, total_improvements=batch_size, mix_steps=mix_steps)
 
+
 def do_improve_chains_with_cosmul(batch_size=1000, mix_steps=10):
     f_h_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
     input_dir = os.path.join(f_h_dir, 'pipeline')
@@ -102,20 +103,23 @@ def do_improve_chains_with_cosmul(batch_size=1000, mix_steps=10):
                         'word2vec_ruscorpora_none_fasttextskipgram']
 
     Heuristics.improve_chains_with_cosmul(chains_file=input_file, supported_models=supported_models,
-                              vocabulary=vocab_words_list, total_improvements=batch_size, mix_steps=mix_steps)
+                                          vocabulary=vocab_words_list, total_improvements=batch_size,
+                                          mix_steps=mix_steps)
+
 
 # run = do_improve_chains(batch_size=10000, mix_steps=300)
 
 
 # run = produce_append_big_file_for_model_tests(10000000)
 
-#run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048', 'm_russian_gpt2-aws'], True, 100000)
+# run = Heuristics.do_precomputations_by_file(['elmo_tayga_lemmas_2048', 'm_russian_gpt2-aws'], True, 100000)
 
 # run = produce_append_big_file_for_model_tests(1000000)
 
-run = Heuristics.do_precomputations_by_file(unsupported_models=[], do_equity=True, next_step_count=200000, verbose=False)
+run = Heuristics.do_precomputations_by_file(unsupported_models=[], do_equity=True, next_step_count=210000,
+                                            verbose=False)
 
-#run = do_improve_chains_with_cosmul(batch_size=10000, mix_steps=300)
+# run = do_improve_chains_with_cosmul(batch_size=10000, mix_steps=300)
 
 # TODO: проверить, что хэши работают корректно, и Reader реально не читает строки, которые уже есть в выходном файле
 # TODO: left join на Pandas для объединения предобсчитанных файлов
@@ -124,3 +128,4 @@ run = Heuristics.do_precomputations_by_file(unsupported_models=[], do_equity=Tru
 # TODO: переименовать параметр проверки валидности цепочек в соответствие с кодом (не cosmul, а n_sim) в файлах параметров word2vec
 # TODO: left join на Pandas и Dataframes for precomputing results
 # TODO: shuffle list и неповторяющиеся кортежи по порядку в качестве содержимого исходного файла для улучшайзеров
+# TODO: вместо re.sub(А-Я) -> отдельную функцию в SWUtils

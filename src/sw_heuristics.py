@@ -232,7 +232,7 @@ class Heuristics:
                         f'Свобода, равенство, браство! Все модели обработали {max_precomputations[1]} цепочек.')
                     break
                 else:
-                    max_diff = next_step_count - max_precomputations[1]
+                    max_diff = abs(next_step_count - max_precomputations[1])
                     sw_logger.info(
                         f'Все модели обработали {max_precomputations[1]} цепочек, но надо набрать {next_step_count}, поэтому теперь будут добирать ещё {max_diff} штук.')
 
@@ -260,6 +260,7 @@ class Heuristics:
 
                 # Если добрали разницу — выходим
                 if i >= max_diff:
+                    csv_writer.flush()
                     break
 
                 i = i + 1
@@ -295,7 +296,7 @@ class Heuristics:
     def unpack_precomputed_chain_result_for_csv_writing(row):
 
         res = []
-        exp_words = re.sub(r"[^а-яА-Я]+", ' ', row[7]).strip(' ')
+        exp_words = re.sub(r"[^а-яА-ЯЁ-ё]+", ' ', row[7]).strip(' ')
         target = row[6]
         full_chain = []
         full_chain.append(target)
