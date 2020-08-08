@@ -11,12 +11,13 @@
 # 10. Ембеддинги DistilBert, Elmo
 import itertools
 from random import randint
-
+from tabulate import tabulate
 import typing
-
+import pandas as pd
+from IPython.display import display, HTML
 import sw_constants
 import logging
-import os, pathlib, json
+import os, pathlib, json, glob
 
 sw_logger = logging.getLogger('socialwhore_loger')
 sw_logger.setLevel(sw_constants.LOGLEVEL)
@@ -75,33 +76,58 @@ config_parser = SWConfigParser()
 
 class SWUtils:
 
-    # TODO переделать на CSV, удалить аналог из Heuristics
-    @staticmethod
-    def unpack_string_from_saved_precomputations_file(string):
-        s = string.strip(' ').split(' | ')[0]
-        prev_res_str = s.split(' : ')[0]
-        if prev_res_str == 'True':
-            prev_res = True
-        elif prev_res_str == 'False':
-            prev_res = True
-        else:
-            prev_res = 'UNK'
-        results_1 = s.split(' : ')
-        hash_sum_str = results_1[1]
-        # hash_sum = hash_sum_str.strip("'")
-        hash_sum = hash_sum_str
-        threshold_min_str = results_1[2]
-        threshold_max_str = results_1[3]
-        type_prefix_str = results_1[4]
-        model_name_str = results_1[5]
-        metric_res = results_1[6]
+    # # TODO переделать на CSV, удалить аналог из Heuristics
+    # @staticmethod
+    # def unpack_string_from_saved_precomputations_file(string):
+    #     s = string.strip(' ').split(' | ')[0]
+    #     prev_res_str = s.split(' : ')[0]
+    #     if prev_res_str == 'True':
+    #         prev_res = True
+    #     elif prev_res_str == 'False':
+    #         prev_res = True
+    #     else:
+    #         prev_res = 'UNK'
+    #     results_1 = s.split(' : ')
+    #     hash_sum_str = results_1[1]
+    #     # hash_sum = hash_sum_str.strip("'")
+    #     hash_sum = hash_sum_str
+    #     threshold_min_str = results_1[2]
+    #     threshold_max_str = results_1[3]
+    #     type_prefix_str = results_1[4]
+    #     model_name_str = results_1[5]
+    #     metric_res = results_1[6]
+    #
+    #     s = string.strip(' ').split(' | ')[1]
+    #     results_2 = s.split(' =?= ')
+    #     target = results_2[0]
+    #     exp_words = results_2[1].replace("[", '').replace("'", '').replace(',', '').replace(']', '').replace('\n', '')
+    #     exp_words = exp_words.split(' ')
+    #     return prev_res, hash_sum, threshold_min_str, threshold_max_str, type_prefix_str, model_name_str, metric_res, target, exp_words
 
-        s = string.strip(' ').split(' | ')[1]
-        results_2 = s.split(' =?= ')
-        target = results_2[0]
-        exp_words = results_2[1].replace("[", '').replace("'", '').replace(',', '').replace(']', '').replace('\n', '')
-        exp_words = exp_words.split(' ')
-        return prev_res, hash_sum, threshold_min_str, threshold_max_str, type_prefix_str, model_name_str, metric_res, target, exp_words
+    @staticmethod
+    def do_merge_precomputed_chain_files(file_dir: str, precs_file_suffix='_precs_out.csv'):
+        all_files = os.listdir(file_dir)
+        files = []
+        for file in all_files:
+            if (precs_file_suffix in file.lower()):
+                files.append(file.lower())
+        first_file = files[0]
+        first_file_path = os.path.join(file_dir, first_file)
+        chains_columns = ['hash_sum', 'generator_name', 'depth_of_generations', 'generation_type', 'target', 'exp_words']
+        next_files_columns = ['hash_sum', 'model_rank_score']
+        chains_df = pd.read_csv(filepath_or_buffer=first_file_path, usecols=chains_columns)
+        html_path = os.path.join(file_dir, 'temp.html')
+        merged_file_path = os.path.join(file_dir, 'precomputations_merged.csv')
+        if os.path.exists(merged_file_path):
+            os.remove(merged_file_path)
+        for file in files:
+            file_path = os.path.join(file_dir, file)
+            file_as_df = pd.read_csv(filepath_or_buffer=file_path, usecols=next_files_columns)
+            chains_df = chains_df.merge(right=file_as_df, on='hash_sum')
+            model_name = file.replace(precs_file_suffix, '')
+            chains_df.rename(columns={'model_rank_score': f'{model_name}_rank_score'}, inplace=True)
+        chains_df.to_csv(path_or_buf=merged_file_path)
+
 
     @staticmethod
     def get_file_len(file_name):

@@ -1,0 +1,12 @@
+1. pymagnitude_tayga_lemmas_ELMo: <=58.3,  64.36-64.39, 96.2-96.3 / мягкий: <=59.5, >=95.
+2. elmo_tayga_lemmas_2048: <=74.19, / мягкий: <75.6
+3. word2vec_tayga_bow: > 1.71 (склонна разные объяснения к одним цепочкам)
+4. word2vec_araneum_fasttextskipgram_300: > 0.15 (синонимичные, но подойдут)
+5. word2vec_ruscorpora_none_fasttextskipgram: не нашёл
+6. m_russian_gpt2-aws: > 1.07
+7. bert_base_multilingual_cased:
+8. bert_base_multilingual_uncased:
+9. conversational_ru_bert:
+10. ru_bert_cased:
+11. sentence_ru_bert:
+12. slavic_bert_model:

@@ -12,6 +12,8 @@ from pymagnitude import *
 
 from gensim import utils, matutils
 
+from navec import Navec
+
 from sw_core import sw_logger, SWUtils
 from sw_core import config_parser
 import itertools
@@ -232,6 +234,11 @@ class BaseModelWrapper(metaclass=IAbstractModelWrapper):
                 params_file_dir = config_parser.config['sw_supported_models'][self.model_name]
                 self.model.eval()
 
+            if self.model_name in config_parser.config['sw_navec_models']:
+                self.model = Navec.load(config_parser.config['sw_supported_models'][self.model_name])
+                # self.elmo_embedder()
+                params_file_dir = os.path.dirname(config_parser.config['sw_supported_models'][self.model_name])
+
             if self.model_name in config_parser.config['sw_pymagnitude_models']:
                 self.model = Magnitude(config_parser.config['sw_supported_models'][self.model_name])
                 # self.elmo_embedder()
@@ -347,7 +354,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
 
         target = exp_string.split(' ')[0]
         exp_words = exp_string.split(' ')[1:]
-        n_sim = self.model.n_similarity(target, exp_words)
+        n_sim = self.model.wmdistance(target, exp_words)
         if (n_sim <= self.params['cosmul_similarity_for_chain_validation_max']) and (
                 n_sim >= self.params['cosmul_similarity_for_chain_validation_min']):
             return True, n_sim
@@ -394,7 +401,7 @@ class Word2VecModelWrapper(BaseModelWrapper):
             i += 1
         return voc_dict
 
-    def get_most_similar_cosmul_from_vocab(self,entities_list, vocab_dict, wvecs, positive=None, negative=None, topn=10):
+    def get_most_similar_cosmul_from_vocab(self,entities_list, vocab_dict, wvecs, positive=None, negative=None, topn=1):
         super(self.__class__, self).check_init_model_state()
 
         if isinstance(topn, Integral) and topn < 1:
@@ -485,7 +492,8 @@ class Word2VecModelWrapper(BaseModelWrapper):
         if not topn:
             return dists
         best = matutils.argsort(dists, topn=topn + len(all_words), reverse=True)
-        return [entities_list[el - 1] for el in best]
+        result = [entities_list[el - 1] for el in best if (el -1) not in all_words]
+        return result[:topn]
 
     def improve_chain(self, target: list, exp_chain: list, vocab_list: list, word_vecs, depth=6, type_gen=0):
         super(self.__class__, self).check_init_model_state()
@@ -634,6 +642,47 @@ class PymagnitudeModelWrapper(BaseModelWrapper):
         else:
             return False, dist
 
+class NavecModelWrapper(BaseModelWrapper):
+    def __init__(self, model):
+        super(self.__class__, self).__init__(model)
+
+    def get_embeddings(self, word):
+        super(self.__class__, self).check_init_model_state()
+
+
+    def check_init_model_state(self):
+        super(self.__class__, self).check_init_model_state()
+
+    def check_synonymy(self, w1: Word, w2: Word):
+        pass
+
+    def check_explanation_chain_validity(self, target: Word, exp_chain: list):
+        super(self.__class__, self).check_init_model_state()
+
+        # Что-то такое сюда
+        string = target + str(exp_chain)
+        string = re.sub(r"[^а-яА-ЯЁ-ё]+", ' ', string).strip(' ').split(' ')
+        target_title = string[0]
+        exp_titles = string[1:]
+
+        if self.model.get(target_title) is None:
+            return False, -666
+        else:
+            target_vec = self.model.get(target_title)
+
+        exp_sum_vector = []
+        for word in exp_titles:
+            if self.model.get(word) is None:
+                return False, -666
+            else:
+                embeddings = self.model.get(word)
+                res_vector = Math.sum_vectors(exp_sum_vector, embeddings)
+
+        dist = scipy.spatial.distance.cosine(target_vec, res_vector)
+
+
+        return False, dist
+
 
 all_sw_models = {}
 for key, value in config_parser.config['sw_supported_models'].items():
@@ -647,6 +696,8 @@ for key, value in config_parser.config['sw_supported_models'].items():
         all_sw_models[key] = gpt2ModelWrapper(key)
     if 'pymagnitude' in key:
         all_sw_models[key] = PymagnitudeModelWrapper(key)
+    if 'navec' in key:
+        all_sw_models[key] = NavecModelWrapper(key)
 
 
 class Quorum:

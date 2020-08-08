@@ -151,6 +151,8 @@ def pymagnitude_test():
     vectors.most_similar_cosmul(positive=["woman", "king"], negative=["man"])
     print(vectors.similarity('нож', ["подарок", "лужа", 'крехер']))
 
-run = get_combinations()
+#run = get_combinations()
+
+run = SWUtils.do_merge_precomputed_chain_files('/Users/yet-another-schizotypic/Documents/__Develop/Социоблядь/social_whr_generator/output/heuristics/fileheuristics/pipeline/improvement/precomputations')
 
 

@@ -1,9 +1,12 @@
 {
+	"sw_navec_models":{
+		"navec_hudlit_v1": "./models/navec/navec_hudlit_v1_12B_500K_300d_100q/navec_hudlit_v1_12B_500K_300d_100q.tar",
+		"navec_news_v1": "./models/navec/navec_news_v1_1B_250K_300d_100q/navec_news_v1_1B_250K_300d_100q.tar"
+	},
 	"sw_pymagnitude_models":{
 		"pymagnitude_tayga_lemmas_ELMo": "./models/pymagnitude/pymagnitude_tayga_lemmas_ELMo/model.magnitude"
 		},
-    
-    "sw_bert_models": {
+     "sw_bert_models": {
         "bert_base_multilingual_cased": "./models/BERT/bert_base_multilingual_cased/",
         "bert_base_multilingual_uncased": "./models/BERT/bert_base_multilingual_uncased/",
         "conversational_ru_bert": "./models/BERT/conversational_ru_bert/ru_conversational_cased_L-12_H-768_A-12_pt/",

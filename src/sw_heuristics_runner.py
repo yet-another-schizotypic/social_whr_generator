@@ -48,8 +48,7 @@ def check_explanation_chain_validity_with_permutations(model_name, target, exp_w
 
 # run = check_bert_with_permutations(10000)
 
-def produce_append_big_file_for_model_tests(sample_count_per_one_run):
-    # TODO: data_dir — вынести в конфиг
+#todDO: data_dir — вынести в конфиг
     output_dir = config_parser.config['sw_dirs']['file_heuristics_dir']
     output_dir = os.path.join(output_dir, 'pipeline/')
     if not os.path.exists(output_dir):
@@ -107,7 +106,7 @@ def do_improve_chains_with_cosmul(batch_size=1000, mix_steps=10):
                                           mix_steps=mix_steps)
 
 
-# run = do_improve_chains(batch_size=10000, mix_steps=300)
+#run = do_improve_chains(batch_size=30000, mix_steps=300)
 
 
 # run = produce_append_big_file_for_model_tests(10000000)
@@ -117,9 +116,9 @@ def do_improve_chains_with_cosmul(batch_size=1000, mix_steps=10):
 # run = produce_append_big_file_for_model_tests(1000000)
 
 run = Heuristics.do_precomputations_by_file(unsupported_models=[], do_equity=True, next_step_count=210000,
-                                            verbose=False)
+                                           verbose=False)
 
-# run = do_improve_chains_with_cosmul(batch_size=10000, mix_steps=300)
+#run = do_improve_chains_with_cosmul(batch_size=200000, mix_steps=300)
 
 # TODO: проверить, что хэши работают корректно, и Reader реально не читает строки, которые уже есть в выходном файле
 # TODO: left join на Pandas для объединения предобсчитанных файлов
